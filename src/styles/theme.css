@@ -1,0 +1,40 @@
+/**
+ * A.MS — jetons de thème.
+ * Palette : bleu nuit, gris anthracite, texte clair,
+ * touches dorées / bleu électrique avec parcimonie.
+ * Mode sombre unique à l'étape 1.
+ */
+
+:root {
+  /* Fond : bleu nuit */
+  --ams-bg: #0b1220;
+  --ams-bg-elevated: #111a2e;
+
+  /* Surfaces : gris anthracite bleuté */
+  --ams-surface: #161f33;
+  --ams-surface-2: #1d2942;
+  --ams-border: #2a3752;
+
+  /* Texte clair */
+  --ams-text: #e8edf5;
+  --ams-text-muted: #93a1b8;
+
+  /* Accents (parcimonieux) */
+  --ams-gold: #d4af37;
+  --ams-gold-soft: rgba(212, 175, 55, 0.14);
+  --ams-blue: #3b82f6;
+  --ams-blue-soft: rgba(59, 130, 246, 0.16);
+
+  /* Sémantique */
+  --ams-success: #3fb950;
+  --ams-warning: #d29922;
+  --ams-danger: #e5534b;
+
+  /* Forme */
+  --ams-radius: 14px;
+  --ams-tap-min: 48px;
+
+  /* Mouvement */
+  --ams-motion-duration: 180ms;
+  --ams-motion-easing: ease-out;
+}

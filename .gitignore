@@ -1,0 +1,35 @@
+# Dépendances
+node_modules/
+
+# Build web
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android (généré par `npx cap add android` / `cap sync`)
+android/.gradle/
+android/.cxx/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/public/
+# Keystores de signature — JAMAIS versionnés
+*.jks
+*.keystore
+
+# Éditeurs
+.vscode/
+.idea/
+
+# Couverture de tests
+coverage/
+
+# Captures d'écran Capacitor
+capture-*.jpg
+capture-*.png
