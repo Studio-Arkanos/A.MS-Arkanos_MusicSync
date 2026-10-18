@@ -2,11 +2,8 @@ import type { DownloadItem, DownloadProviderId, SearchResult } from '../../domai
 
 /**
  * Fournisseurs de téléchargement AUTORISÉS (liste blanche).
- *
- * Module PRÉPARÉ à l'étape 1 : la liste blanche est vide et le
- * gestionnaire est un stub honnête. Seuls les fournisseurs
- * explicitement autorisés (licences / fichiers personnels) seront
- * branchés aux étapes 2 et 3.
+ * Le moteur de téléchargement réel arrive à l'étape 3.
+ * Garantie déjà en place : on n'écrase JAMAIS un fichier existant.
  */
 
 export interface DownloadProvider {
@@ -37,16 +34,31 @@ export class DownloadProviderRegistry {
 
 export interface DownloadManager {
   readonly operational: boolean;
-  queue(source: SearchResult): Promise<DownloadItem>;
+  /** Téléverse un morceau vers la cible indiquée. */
+  queue(source: SearchResult, targetUri: string): Promise<DownloadItem>;
+  /** Un fichier existe-t-il déjà à cette cible ? */
+  exists(targetUri: string): boolean;
   list(): DownloadItem[];
 }
 
 export class DownloadManagerStub implements DownloadManager {
+  constructor(private readonly existingTargets: Set<string> = new Set()) {}
+
   readonly operational = false;
 
-  async queue(_source: SearchResult): Promise<DownloadItem> {
+  exists(targetUri: string): boolean {
+    return this.existingTargets.has(targetUri);
+  }
+
+  async queue(_source: SearchResult, targetUri: string): Promise<DownloadItem> {
+    // Garantie anti-écrasement, vérifiable dès maintenant.
+    if (this.exists(targetUri)) {
+      throw new Error(
+        `DOWNLOAD_TARGET_EXISTS : un fichier existe déjà à cette cible (${targetUri}) — jamais écrasé.`,
+      );
+    }
     throw new Error(
-      'DOWNLOAD_NOT_IMPLEMENTED : le gestionnaire de téléchargements sera branché à l’étape 3.',
+      'DOWNLOAD_NOT_IMPLEMENTED : le moteur de téléchargement arrive à l’étape 3.',
     );
   }
 

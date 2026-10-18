@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
   HistoryIcon,
@@ -10,6 +11,7 @@ import {
   SettingsIcon,
 } from '../components/icons';
 import { fr } from '../i18n/fr';
+import AmsNative from '../plugins/amsNative';
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/icons';
 
@@ -31,6 +33,18 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function MainTabs() {
+  const navigate = useNavigate();  // Deep-link : une notification (correspondance incertaine)
+  // ouvre l'écran du morceau concerné.
+  useEffect(() => {
+    AmsNative.getPendingRoute()
+      .then(({ route }) => {
+        if (route) navigate(route, { replace: true });
+      })
+      .catch(() => {
+        // navigateur de développement : sans objet.
+      });
+  }, [navigate]);
+
   return (
     <div className="app-shell">
       <header className="app-header">

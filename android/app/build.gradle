@@ -55,6 +55,8 @@ dependencies {
     implementation "androidx.room:room-runtime:$roomVersion"
     implementation "androidx.room:room-ktx:$roomVersion"
     kapt "androidx.room:room-compiler:$roomVersion"
+    // SAF : parcours de dossiers distants (DocumentFile)
+    implementation "androidx.documentfile:documentfile:1.0.1"
 }
 
 apply from: 'capacitor.build.gradle'

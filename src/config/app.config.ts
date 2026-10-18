@@ -10,23 +10,28 @@ export const APP = {
 } as const;
 
 /**
- * Statut réel de chaque fonctionnalité à l'étape 1.
+ * Statut réel de chaque fonctionnalité à l'étape 2.
  * Règle : jamais de statut « operational » sans implémentation réelle.
  */
 export const FEATURES: Record<string, { status: ModuleStatus; label: string }> = {
-  syncEngine: { status: 'stub', label: 'Moteur de synchronisation' },
-  playlists: { status: 'planned', label: 'Playlists' },
-  localScan: { status: 'stub', label: 'Scan de la bibliothèque locale' },
+  syncEngine: { status: 'stub', label: 'Moteur de synchronisation (exécution — étape 3)' },
+  playlistAnalysis: { status: 'operational', label: 'Analyse de playlist (YouTube Data API v3)' },
+  playlists: { status: 'operational', label: 'Playlists' },
+  localScan: { status: 'operational', label: 'Scan de la bibliothèque locale (SAF)' },
   normalization: { status: 'operational', label: 'Normalisation des noms' },
   duplicates: { status: 'operational', label: 'Détection des doublons' },
-  exclusions: { status: 'operational', label: 'Gestion des exclusions' },
+  exclusions: { status: 'operational', label: 'Gestion des exclusions (persistantes)' },
+  decisions: { status: 'operational', label: 'Décisions en attente' },
   searchProviders: { status: 'planned', label: 'Fournisseurs de recherche' },
   downloadProviders: { status: 'planned', label: 'Fournisseurs de téléchargement autorisés' },
-  notifications: { status: 'stub', label: 'Notifications' },
+  notifications: { status: 'operational', label: 'Notifications (natif)' },
   backgroundTasks: { status: 'stub', label: 'Tâches en arrière-plan' },
-  database: { status: 'stub', label: 'Base de données (Room)' },
+  database: { status: 'operational', label: 'Base locale (Room prêt, pont étape 3)' },
   history: { status: 'operational', label: 'Historique des opérations' },
 };
+
+/** Dossier de bibliothèque locale par défaut (cahier des charges). */
+export const DEFAULT_LIBRARY_FOLDER = '/storage/emulated/0/Music/Musics';
 
 /**
  * Le moteur de synchronisation n'est PAS opérationnel à l'étape 1.

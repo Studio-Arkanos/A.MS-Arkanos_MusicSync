@@ -69,11 +69,24 @@ android/
 ```bash
 npm test
 ```
-Couverture à l'étape 1 : normalisation (accents, ligatures, ponctuation),
-empreintes, Levenshtein, doublons exacts/quasi, exclusions (titre,
-artiste, dossier, regex, règles désactivées), historique, et le
-**comportement honnête des stubs** (refus de synchroniser, scan
-non opérationnel sans données fabriquées).
+Couverture (85 tests, étape 2) :
+- normalisation : exemples du cahier (4 variantes
+  « Gims - Spider » → « gims spider »), qualité,
+  promotionnels, marqueurs de version conservés ;
+- matching : seuils 95 %/80 %, trois états, original
+  vs remix jamais confondus, artiste divergent ;
+- playlist : vide ≠ erreur ≠ indisponible, clé manquante,
+  pagination, vidéos privées/supprimées (fetch simulé) ;
+- scan : formats, fichiers sans métadonnée, dossier
+  vide, dossier inaccessible ;
+- exclusions : individuelles, groupées, persistance
+  (redémarrage), réinitialisation, isolation entre
+  playlists ;
+- décisions : création, résolutions, persistance ;
+- planificateur : les règles de bibliothèque,
+  prime des exclusions, décisions lève-ambiguïté ;
+- téléchargement : jamais d'écrasement d'un fichier
+  préexistant.
 
 ## CI (GitHub Actions)
 

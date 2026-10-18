@@ -7,6 +7,7 @@ import { LibraryScreen } from './screens/LibraryScreen';
 import { PlaylistScreen } from './screens/PlaylistScreen';
 import { SearchScreen } from './screens/SearchScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { TrackScreen } from './screens/TrackScreen';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/telechargements" element={<DownloadsScreen />} />
         <Route path="/historique" element={<HistoryScreen />} />
         <Route path="/parametres" element={<SettingsScreen />} />
+        <Route path="/track/:ref" element={<TrackScreen />} />
         <Route path="*" element={<Navigate to="/accueil" replace />} />
       </Route>
     </Routes>

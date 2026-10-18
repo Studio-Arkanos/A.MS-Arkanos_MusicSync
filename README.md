@@ -1,34 +1,44 @@
 # A.MS — Arkanos Music Sync
 
-Application Android de gestion, synchronisation, recherche et téléchargement musical.
-Organisation : **Studio-Arkanos** · Identifiant Android : `com.arkanos.ams` · Langue : français.
+Application Android de gestion, synchronisation, recherche et
+téléchargement musical. Organisation : **Studio-Arkanos** ·
+Identifiant Android : `com.arkanos.ams` · Langue : français.
 
-> **Statut : étape 1/4 — fondations.** L'architecture, l'interface et les modules
-> métier sont en place. Le moteur de synchronisation, le scan local, les
-> fournisseurs et les téléchargements sont **préparés mais non implémentés**
-> (voir [docs/ROADMAP.md](docs/ROADMAP.md)). Aucune donnée n'est simulée.
+> **Statut : étape 2/4 — playlist, bibliothèque, doublons, exclusions.**
+> L'analyse de playlist (YouTube Data API v3 officielle), le scan
+> local (SAF), la normalisation avancée, la détection de doublons
+> multi-critères et les exclusions manuelles persistantes sont
+> implémentés. Le téléchargement réel arrive à l'étape 3.
+> Aucune donnée n'est jamais simulée.
 
 ## Fonctionnalités par module
 
-| Module | Statut étape 1 |
+| Module | Statut étape 2 |
 | --- | --- |
+| Analyse de playlist (YouTube Data API v3) | ✅ Opérationnel (clé requise) |
+| Scan de bibliothèque locale (SAF) | ✅ Opérationnel (Android) |
 | Normalisation des noms | ✅ Opérationnel (testé) |
-| Détection des doublons | ✅ Opérationnel (testé) |
-| Gestion des exclusions | ✅ Opérationnel (testé) |
-| Historique des opérations | ✅ Opérationnel (réel) |
-| Moteur de synchronisation | 🟡 Stub honnête (étape 2) |
-| Scan de la bibliothèque locale | 🟡 Stub honnête (étape 2) |
-| Fournisseurs de recherche | ⚪ Préparé (étape 2) |
-| Fournisseurs de téléchargement autorisés | ⚪ Préparé (étapes 2–3) |
-| Notifications / arrière-plan | 🟡 Stub (étape 3) |
-| Base de données Room | 🟡 Schéma prêt (étape 2) |
+| Détection des doublons multi-critères | ✅ Opérationnel (testé) |
+| Exclusions manuelles persistantes | ✅ Opérationnel (testé) |
+| Décisions en attente | ✅ Opérationnel (testé) |
+| Planificateur de synchronisation | ✅ Opérationnel (testé) |
+| Notifications (canal + deep-link) | ✅ Natif implémenté |
+| Historique des opérations | ✅ Opérationnel |
+| Moteur de téléchargement | 🟡 Stub honnête (étape 3) |
+| Fournisseurs de recherche | ⚪ Préparé (étape 3) |
+| Tâches en arrière-plan (WorkManager) | 🟡 Stub (étape 3) |
 
 ## Prérequis
 
 - **Node.js ≥ 22** (compilation uniquement — pas besoin sur le téléphone)
 - Android Studio (pour construire l'APK) ou GitHub Actions
-- L'application finale est **100 % autonome** : aucun Termux, Python, Node.js,
-  PostgreSQL, serveur web ou VPS requis sur l'appareil.
+- Une clé **YouTube Data API v3** (Google Cloud Console) pour
+  l'analyse de playlist — stockée localement, jamais envoyée
+  ailleurs que vers googleapis.com
+
+L'application finale est **100 % autonome** : aucun Termux,
+Python, Node.js, PostgreSQL, serveur web ou VPS requis sur
+l'appareil.
 
 ## Installation et développement
 
@@ -37,41 +47,47 @@ npm ci                 # installer les dépendances verrouillées
 npm run dev            # serveur de développement web (preview)
 npm run typecheck      # vérification TypeScript
 npm run lint           # lint
-npm test               # tests unitaires (Vitest)
+npm test               # tests unitaires (Vitest, 85 tests)
 npm run build          # build web → dist/
-npx cap sync android   # injecter le build dans le projet Android
-npx cap open android   # ouvrir dans Android Studio
+npm run cap:sync       # injecter le build dans le projet Android
+npm run cap:open:android
+npm run android:build  # APK debug (nécessite le SDK Android)
 ```
 
-## Architecture
+## Points clés de l'étape 2
 
-Hybrid **Capacitor 8** : interface React 19 + TypeScript + Vite 7, emboutie
-dans un APK Android natif (Kotlin), avec Room/SQLite pour la persistance et
-un plugin Capacitor personnalisé (`AmsNative`) pour les fonctions natives.
+- **Playlist initiale** : « Zenith »
+  (`PL-Res9ahnuezOhvq6KlPTL4s61BKdr-Ub`), URL modifiable dans
+  l'écran Playlist.
+- **Bibliothèque** : dossier par défaut
+  `/storage/emulated/0/Music/Musics`, sélection via le Storage
+  Access Framework (autorisation persistante), formats MP3,
+  M4A, AAC, FLAC, OGG, WAV, reconnaissance par nom de fichier
+  (aucune métadonnée requise).
+- **Normalisation** : « Gims - Spider (Clip Officiel).mp3 »,
+  « Gims - Spider 128K.mp3 », « GIMS - Spider (Official Music
+  Video).mp3 » et « GIMS - Spider [Visualizer].mp3 » donnent
+  tous la clé **« gims spider »** ; les marqueurs de version
+  (Remix, Live, Acoustic, Instrumental, Sped Up, Slowed,
+  Reverb, Radio Edit…) sont conservés.
+- **Doublons** : empreinte exacte, similarité textuelle,
+  mots significatifs, marqueurs de version — seuils 95 % /
+  80 % configurables ; trois états (Déjà présent / Incertain /
+  Absent) ; un remix n'est jamais confondu avec un original.
+- **Exclusions** : persistantes (identité stable source +
+  morceau), survivent au redémarrage et à une nouvelle
+  analyse, priment sur l'automatisme, ne suppriment jamais
+  la chanson de la playlist source, réintégration explicite,
+  réinitialisation après confirmation.
+- **Anti-écrasement** : un fichier existant n'est jamais
+  écrasé (garantie testée).
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — architecture et décisions
-- [docs/TECHNOLOGIES.md](docs/TECHNOLOGIES.md) — choix technologiques vérifiés
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — guide de développement
-- [docs/ROADMAP.md](docs/ROADMAP.md) — fonctions restantes par étape
+## Documentation
 
-## Structure du projet
-
-```
-src/                    # Application web (React + TS)
-  config/               # Configuration, statuts de fonctionnalités
-  domain/               # Types métier
-  modules/              # Modules métier (sync, scan, doublons, exclusions…)
-  plugins/              # Pont vers le plugin natif AmsNative
-  navigation/           # Navigation par onglets (7 écrans)
-  screens/              # Écrans (Accueil, Playlist, Recherche…)
-  components/           # Composants UI
-  i18n/                 # Chaînes françaises
-android/                # Projet Android natif (Kotlin, Room)
-  app/…/plugins/        # Plugin Capacitor AmsNative
-  app/…/data/           # Base Room (SQLite)
-.github/workflows/      # CI : lint, tests, build, APK
-docs/                   # Documentation
-```
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/TECHNOLOGIES.md](docs/TECHNOLOGIES.md)
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## Licence
 

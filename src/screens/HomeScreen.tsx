@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SYNC_ENGINE_READY, FEATURES } from '../config/app.config';
 import { fr } from '../i18n/fr';
 import { services } from '../app/services';
+import { loadLibraryState } from '../app/libraryState';
+import { loadPlaylistAnalysis } from '../app/playlistState';
 import { ProgressBar } from '../components/ProgressBar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatCard } from '../components/StatCard';
@@ -10,43 +12,73 @@ import type { OperationRecord } from '../domain/models';
 
 /**
  * Écran Accueil — tableau de bord.
- * Toutes les valeurs affichées sont RÉELLES (vide à l'étape 1).
- * Le bouton de synchronisation est désactivé tant que le moteur
- * n'est pas opérationnel : aucune synchronisation n'est simulée.
+ * Toutes les valeurs sont RÉELLES (calculées depuis les
+ * analyses, scans, exclusions et décisions persistés).
+ * Le bouton de synchronisation reste désactivé : l’exécution
+ * des téléchargements arrive à l’étape 3.
  */
 export function HomeScreen() {
-  const [trackCount, setTrackCount] = useState<number | null>(null);
   const [lastOperation, setLastOperation] = useState<OperationRecord | null>(null);
+  const [pendingDecisions, setPendingDecisions] = useState(0);
 
   useEffect(() => {
-    services.tracks.count().then(setTrackCount).catch(() => setTrackCount(0));
     services.history
       .list()
       .then((records) => setLastOperation(records[0] ?? null))
       .catch(() => setLastOperation(null));
+    setPendingDecisions(services.decisions.listPending().length);
   }, []);
+
+  // Relecture des états persistés (réel, jamais simulé).
+  const dashboard = useMemo(() => {
+    const library = loadLibraryState(services.storage);
+    const analysis = loadPlaylistAnalysis(services.storage);
+    const sourceId = analysis?.playlistId ?? '';
+    const tracks = analysis?.tracks ?? [];
+    const result = services.planner.plan(
+      tracks,
+      library?.tracks ?? [],
+      sourceId,
+    );
+    return {
+      playlistName: analysis ? (sourceId ? `Playlist ${sourceId.slice(0, 12)}…` : '') : '',
+      libraryCount: library?.tracks.length ?? 0,
+      scanDate: library?.scannedAt,
+      summary: result.summary,
+    };
+  }, []);
+
+  const summary = dashboard.summary;
 
   return (
     <section className="screen">
       <h1 className="screen-title">{fr.home.title}</h1>
 
-      <div className="banner banner-warning">
+      <div className="banner banner-info">
         <strong>A.MS — {fr.app.stepBadge}</strong>
         <p>{fr.home.engineNotReady}</p>
       </div>
 
       <div className="stat-grid">
-        <StatCard label={fr.home.activePlaylist} value={fr.home.none} />
-        <StatCard
-          label={fr.home.analyzed}
-          value={trackCount ?? '—'}
-          hint={FEATURES.localScan.label}
-        />
-        <StatCard label={fr.home.present} value={0} />
-        <StatCard label={fr.home.toDownload} value={0} />
-        <StatCard label={fr.home.excluded} value={0} />
-        <StatCard label={fr.home.pending} value={0} />
+        <StatCard label={fr.home.activePlaylist} value={dashboard.playlistName || fr.home.none} />
+        <StatCard label={fr.home.analyzed} value={dashboard.libraryCount} />
+        <StatCard label={fr.home.found} value={summary.found} />
+        <StatCard label={fr.home.present} value={summary.present} />
+        <StatCard label={fr.home.toDownload} value={summary.candidates} />
+        <StatCard label={fr.home.excluded} value={summary.excluded} />
+        <StatCard label={fr.home.uncertain} value={summary.uncertain} />
+        <StatCard label={fr.home.unavailable} value={summary.unavailable} />
+        <StatCard label={fr.home.pending} value={pendingDecisions} />
       </div>
+
+      <section className="card">
+        <h2 className="card__title">{fr.home.scanDate}</h2>
+        <p className="card__body">
+          {dashboard.scanDate
+            ? new Date(dashboard.scanDate).toLocaleString('fr-FR')
+            : fr.home.never}
+        </p>
+      </section>
 
       <section className="card">
         <h2 className="card__title">{fr.home.syncProgress}</h2>
@@ -66,10 +98,7 @@ export function HomeScreen() {
         )}
       </section>
 
-      <PrimaryButton
-        disabled={!SYNC_ENGINE_READY}
-        disabledReason={fr.home.engineNotReady}
-      >
+      <PrimaryButton disabled={!SYNC_ENGINE_READY} disabledReason={fr.home.engineNotReady}>
         {fr.home.syncNow}
       </PrimaryButton>
 
@@ -80,9 +109,6 @@ export function HomeScreen() {
             {FEATURES.syncEngine.label} <StatusBadge status={FEATURES.syncEngine.status} />
           </li>
           <li>
-            {FEATURES.localScan.label} <StatusBadge status={FEATURES.localScan.status} />
-          </li>
-          <li>
             {FEATURES.searchProviders.label}{' '}
             <StatusBadge status={FEATURES.searchProviders.status} />
           </li>
@@ -91,14 +117,8 @@ export function HomeScreen() {
             <StatusBadge status={FEATURES.downloadProviders.status} />
           </li>
           <li>
-            {FEATURES.notifications.label} <StatusBadge status={FEATURES.notifications.status} />
-          </li>
-          <li>
             {FEATURES.backgroundTasks.label}{' '}
             <StatusBadge status={FEATURES.backgroundTasks.status} />
-          </li>
-          <li>
-            {FEATURES.database.label} <StatusBadge status={FEATURES.database.status} />
           </li>
         </ul>
       </section>

@@ -13,12 +13,18 @@ l'initialisation (registry npm / API GitHub) et sont **verrouillées**
 | Vite | 7.3.7 | Build/ dev server |
 | @vitejs/plugin-react | 5.2.0 | Plugin React pour Vite |
 | react-router-dom | 7.18.4 | Navigation (HashRouter) |
-| Vitest | 5.0.5 | Tests unitaires |
+| Vitest | 5.0.5 | Tests unitaires (85 tests) |
 | ESLint + typescript-eslint | 10.13.0 / 8.71.2 | Vérification du code |
 
 Compatibilités vérifiées : `@vitejs/plugin-react@5.2.0` accepte
 Vite `^4‖^5‖^6‖^7‖^8` ; `vitest@5` accepte Vite `^6.4‖^7‖^8` ;
 `typescript-eslint@8` accepte TypeScript `<6.1`.
+
+## API externes
+
+| API | Usage | Notes |
+| --- | --- | --- |
+| YouTube Data API v3 | Métadonnées de playlist | Officielle, clé utilisateur, quota Google respecté (pagination maxResults=50). Aucun scraping. Métadonnées ≠ autorisation de téléchargement. |
 
 ## Couche native / mobile
 

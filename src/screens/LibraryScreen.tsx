@@ -1,58 +1,148 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import AmsNative from '../plugins/amsNative';
+import { DEFAULT_LIBRARY_FOLDER } from '../config/app.config';
 import { EmptyState } from '../components/EmptyState';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { LibraryIcon } from '../components/icons';
 import { fr } from '../i18n/fr';
 import { services } from '../app/services';
-import type { ScanResult } from '../modules/scanner/scanner';
+import { loadLibraryState, saveLibraryState } from '../app/libraryState';
+import { loadSettings, saveSettings } from '../app/settings';
+import type { LibraryState } from '../app/libraryState';
 
 /**
- * Bibliothèque locale. Le scan natif n'est pas branché à l'étape 1 :
- * le bouton déclenche l'appel RÉEL, qui répond honnêtement
- « non opérationnel » — aucun faux morceau n'est affiché.
+ * Bibliothèque locale.
+ *
+ * Android 11+ : l’accès direct au chemin n’est pas garanti —
+ * le dossier est choisi via le Storage Access Framework
+ * (ACTION_OPEN_DOCUMENT_TREE), l’autorisation persiste.
+ * Les versions antérieures acceptent le chemin direct.
+ * Les morceaux sont reconnus par leur nom de fichier :
+ * aucune métadonnée n’est requise.
  */
 export function LibraryScreen() {
-  const [scan, setScan] = useState<ScanResult | null>(null);
+  const [folder, setFolder] = useState<string>(() => {
+    const saved = loadSettings(services.storage).libraryFolder;
+    return saved || DEFAULT_LIBRARY_FOLDER;
+  });
+  const [state, setState] = useState<LibraryState | null>(() =>
+    loadLibraryState(services.storage),
+  );
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onScan = (event: FormEvent) => {
+  const onPickFolder = async () => {
+    setError(null);
+    try {
+      const { uri } = await AmsNative.pickFolder();
+      if (uri) {
+        setFolder(uri);
+        const settings = loadSettings(services.storage);
+        saveSettings(services.storage, { ...settings, libraryFolder: uri });
+        services.history.record('config_change', 'Dossier de bibliothèque choisi', uri);
+      }
+    } catch (pickError) {
+      setError(
+        `Sélection de dossier impossible : ${(pickError as Error).message}`,
+      );
+    }
+  };
+
+  const onScan = async (event: FormEvent) => {
     event.preventDefault();
     setScanning(true);
-    services.scanner
-      .scan()
-      .then((result) => {
-        setScan(result);
-        setScanning(false);
-      })
-      .catch(() => {
-        setScanning(false);
-      });
+    setError(null);
+    const result = await services.scanner.scan(folder);
+    if (result.status === 'ok') {
+      const next: LibraryState = {
+        folder,
+        scannedAt: result.scannedAt,
+        count: result.files.length,
+        errors: [],
+        tracks: result.tracks.map((track) => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist,
+        })),
+      };
+      saveLibraryState(services.storage, next);
+      setState(next);
+      services.history.record(
+        'scan_attempt',
+        'Bibliothèque analysée',
+        `${next.count} fichier(s) audio`,
+      );
+    } else {
+      setError(result.errors.join(' '));
+      services.history.record('scan_attempt', 'Échec du scan local', result.errors[0]);
+    }
+    setScanning(false);
   };
 
   return (
     <section className="screen">
       <ScreenHeader title={fr.nav.library} />
 
+      <section className="card">
+        <h2 className="card__title">{fr.library.currentFolder}</h2>
+        <p className="card__body folder-path">{folder}</p>
+        <p className="card__muted">{fr.library.formats}</p>
+        <div className="button-row">
+          <button className="btn-secondary" type="button" onClick={onPickFolder}>
+            {fr.library.chooseFolder}
+          </button>
+        </div>
+      </section>
+
       <form onSubmit={onScan}>
         <button className="btn-primary" type="submit" disabled={scanning}>
-          {scanning ? '…' : fr.library.scan}
+          {scanning ? fr.library.scanning : fr.library.scan}
         </button>
       </form>
 
-      {scan ? (
-        <div className="banner banner-warning">
-          <p>{scan.reason}</p>
-        </div>
+      {error ? <div className="banner banner-error">{error}</div> : null}
+
+      {state ? (
+        <section className="card">
+          <h2 className="card__title">{fr.library.scanDate}</h2>
+          <p className="card__body">
+            {state.scannedAt
+              ? new Date(state.scannedAt).toLocaleString('fr-FR')
+              : fr.home.never}
+          </p>
+          <p className="card__body">
+            {fr.library.filesFound} : {state.count} ·{' '}
+            {fr.library.audioFound} : {state.tracks.length}
+          </p>
+          {state.errors.length > 0 ? (
+            <p className="card__muted">
+              {fr.library.errors} : {state.errors.join(', ')}
+            </p>
+          ) : null}
+        </section>
       ) : null}
 
-      <p className="screen__muted">
-        {fr.library.analyzed} : {scan?.tracks.length ?? 0}
-      </p>
-
-      {scan && scan.tracks.length === 0 ? (
-        <EmptyState icon={<LibraryIcon size={40} />} title={fr.library.scanUnavailable} />
+      {state && state.tracks.length > 0 ? (
+        <ul className="track-list">
+          {state.tracks.map((track) => (
+            <li className="card" key={track.id}>
+              <p className="card__body">{track.title}</p>
+              <p className="card__muted">{track.artist}</p>
+            </li>
+          ))}
+        </ul>
       ) : null}
+
+      {!state ? (
+        <EmptyState
+          icon={<LibraryIcon size={40} />}
+          title={fr.library.chooseFirst}
+          description={fr.library.noMetadata}
+        />
+      ) : null}
+
+      <p className="demo-notice">{fr.library.noMetadata}</p>
     </section>
   );
 }

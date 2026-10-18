@@ -54,28 +54,67 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
   explicite. Aucun morceau inventé.
 
 ### Normalisation (`src/modules/normalization/`) — **opérationnel**
-- Rabat d'accents, ligature œ, minuscules, suppression de la
-  ponctuation, empreinte de comparaison (`buildFingerprint`),
-  Levenshtein pour les quasi-doublons.
+- `parseTrackName` : extension, qualité (128K/320K/720P/
+  1080P/4K), promotionnels (Official, Clip Officiel,
+  Visualizer, Lyrics…) supprimés ; marqueurs de version
+  (Remix, Live, Acoustic, Instrumental, Sped Up, Slowed,
+  Reverb, Radio Edit…) **conservés** ; séparation
+  « Artiste - Titre ».
+- Empreinte (`buildFingerprint`), Levenshtein, rabat
+  d'accents, ligature œ.
 
 ### Détection des doublons (`src/modules/duplicates/`) — **opérationnel**
-- Doublons exacts (empreinte) et quasi-doublons (même artiste +
-  titre proche), clustering par union-find.
+- `DuplicateDetector` : doublons exacts (empreinte) et
+  quasi-doublons intra-bibliothèque (union-find).
+- `DuplicateMatcher` : matching playlist ↔ bibliothèque —
+  empreinte, similarité textuelle, mots significatifs
+  (Jaccard), marqueurs de version, artiste. Seuils
+  configurables 95 %/80 % → Déjà présent / Incertain /
+  Absent. Un score élevé ne confond jamais un original
+  et un remix.
 
 ### Exclusions (`src/modules/exclusions/`) — **opérationnel**
-- Règles titre / artiste / dossier / regex, activables individuellement.
+- `ExclusionEngine` : règles automatiques (titre/artiste/
+  dossier/regex).
+- `PersistedExclusionStore` : exclusions manuelles,
+  identité stable (sourceId + trackRef), persistantes,
+  prime sur l'automatisme, réintégration explicite.
 
 ### Fournisseurs de recherche (`src/modules/search/`)
-- Registre de `SearchProvider`. **Aucun fournisseur enregistré** à
-  l'étape 1 : `searchAll()` renvoie une liste vide réelle.
+- Registre de `SearchProvider`. **Aucun fournisseur enregistré** :
+  `searchAll()` renvoie une liste vide réelle (étape 3).
 
 ### Fournisseurs de téléchargement autorisés (`src/modules/download/`)
-- Liste blanche (`ALLOWED_DOWNLOAD_PROVIDERS`, vide à l'étape 1) +
-  `DownloadManager` stub qui refuse les téléchargements.
+- Liste blanche (`ALLOWED_DOWNLOAD_PROVIDERS`, vide) +
+  `DownloadManager` stub : refuse les téléchargements ET
+  refuse explicitement toute cible existante (jamais
+  d'écrasement).
 
-### Notifications (`src/modules/notifications/`)
-- Délégation au plugin natif ; l'appel échoue proprement tant que la
-  couche native n'est pas implémentée (étape 3).
+### Analyse de playlist (`src/modules/playlist/`)
+- Playlist initiale « Zenith », URL modifiable.
+- Fournisseur officiel YouTube Data API v3 (clé stockée
+  localement) : pagination, lot de 50 vidéos, statuts
+  available / private / deleted / unavailable.
+- **Playlist vide ≠ erreur ≠ indisponible** — trois
+  statuts distincts.
+- Récupérer les métadonnées d'une vidéo ne signifie
+  PAS que son audio soit téléchargeable (étape 3,
+  liste blanche).
+
+### Planificateur de synchronisation (`src/modules/sync/planner.ts`)
+- Règles : bibliothèque vide → tout admissible est
+  candidat ; partiellement synchronisée → seuls les
+  manquants ; synchronisée → aucun candidat.
+- Résumé (trouvés/présents/absents/incertains/exclus/
+  indisponibles/candidats) présenté AVANT toute opération.
+- Les incertains ne bloquent rien : ils deviennent des
+  décisions en attente, traitées séparément.
+
+### Décisions (`src/modules/decisions/`)
+- Décisions en attente persistées, trois résolutions
+  possibles (« Déjà présent », « Autoriser le
+  téléchargement », « Ignorer »), notification native
+  ouvrant l'écran du morceau (deep-link `/track/:ref`).
 
 ### Tâches en arrière-plan (`src/modules/background/`)
 - `BackgroundTaskScheduler` stub ; WorkManager à l'étape 3.
@@ -93,14 +132,31 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
 - `isNativeAvailable`, `getDeviceInfo` (réels dès l'étape 1) ;
   `notify`, `scanLibrary`, `schedulePeriodicSync` (stubs honnêtes).
 
-## Flux de données (cible étape 2)
+## Flux de données (étape 2, en place)
 
 ```
-scan local (MediaStore) → normalisation → déduplication
-  → comparaison catalogue distant (fournisseurs autorisés)
-  → décisions (télécharger / garder / exclure / en attente)
-  → téléchargements (liste blanche) → Room → historique
+analyse playlist (YouTube Data API v3, clé officielle)
+  ↘
+scan local (SAF / DocumentFile) → normalisation (nom de fichier)
+  → matching multi-critères (empreinte, similarité, mots,
+    marqueurs de version, artiste)
+  → exclusions (stockage local, identité stable)
+  → plan : présent / incertain (décision) / absent (candidat)
+  → résumé affiché AVANT toute opération
+  → téléchargements (liste blanche — étape 3) → Room → historique
 ```
+
+### Persistance (étape 2)
+- Exclusions, décisions, playlist, bibliothèque, paramètres :
+  localStorage de la WebView Capacitor (survit au redémarrage).
+- Schéma Room complet côté Android (tracks, exclusions,
+  pending_decisions, playlists) — pont web ↔ Room à l'étape 3.
+
+### Identités stables
+- Exclusion : (sourceId = id playlist, trackRef = id vidéo).
+  Survit à la fermeture, au redémarrage et à une nouvelle
+  analyse ; prime sur l'automatisme ; jamais annulée
+  silencieusement.
 
 ## Décisions architecturales
 
