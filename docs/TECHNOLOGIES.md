@@ -24,7 +24,36 @@ Vite `^4‖^5‖^6‖^7‖^8` ; `vitest@5` accepte Vite `^6.4‖^7‖^8` ;
 
 | API | Usage | Notes |
 | --- | --- | --- |
-| YouTube Data API v3 | Métadonnées de playlist | Officielle, clé utilisateur, quota Google respecté (pagination maxResults=50). Aucun scraping. Métadonnées ≠ autorisation de téléchargement. |
+| YouTube Data API v3 | Recherche, métadonnées, playlists | Officielle, clé utilisateur, quota Google respecté (maxResults=20/50). Aucun scraping. Métadonnées ≠ autorisation de téléchargement — téléchargement YouTube jamais proposé. |
+| Jamendo API v3 | Recherche + téléchargement autorisé | Officielle, client_id gratuit. Téléchargement uniquement si `audiodownload_allowed`. Licences CC affichées. |
+
+## Conversion audio — décision documentée (étape 3)
+
+**Aucune bibliothèque de conversion n'est intégrée.**
+Évaluation :
+
+- **FFmpegKit** (arthenica/ffmpeg-kit) : moteur complet,
+  ARM64/Android supporté, activement maintenu — mais
+  licences LGPL/GPL/**commerciales** : l'app A.MS est
+  MIT, et l'intégration d'un binaire GPL sans vérification
+  juridique serait incorrecte. De plus, aucune compilation
+  native ne peut être vérifiée dans l'environnement de
+  développement (pas de SDK Android).
+- **Exigence du cahier** : « la conversion ne doit être
+  activée que si une solution réellement compatible Android
+  a été vérifiée ».
+
+**Décision** : interface `ConversionManager` prête, stub
+honnête (`available = false`), jamais de simulation.
+Règles respectées dès maintenant :
+- MP3 source → aucune conversion inutile
+  (`isConversionNeeded('mp3','mp3') === false`) ;
+- si un format ne peut pas être converti, la limitation
+  est explicite et le fichier source téléchargé est
+  préservé (jamais écrasé, jamais supprimé).
+
+Intégration envisageable (étape 4 ou ultérieure) après
+validation juridique de licence et build Android vérifié.
 
 ## Couche native / mobile
 

@@ -1,21 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ScreenHeader } from '../components/ScreenHeader';
+import AmsNative from '../plugins/amsNative';
+import type { AssociationCandidate } from '../modules/association/association';
+import { services } from '../app/services';
+import { loadLibraryState } from '../app/libraryState';
+import { loadPlaylistAnalysis } from '../app/playlistState';
+import { loadSettings } from '../app/settings';
 import { EmptyState } from '../components/EmptyState';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { MusicIcon } from '../components/icons';
 import { fr } from '../i18n/fr';
-import { services } from '../app/services';
-import { loadPlaylistAnalysis } from '../app/playlistState';
-import { loadLibraryState } from '../app/libraryState';
 
 /**
  * Écran du morceau — ouvert depuis une notification
- * (correspondance incertaine / décision en attente).
- * L’utilisateur tranche : Déjà présent / Télécharger / Ignorer.
+ * (correspondance incertaine) ou depuis la playlist.
+ * L'utilisateur tranche : « Déjà présent »,
+ * « Autoriser le téléchargement » ou « Ignorer ».
+ * Association : recherche de versions téléchargeables
+ * autorisées (Jamendo), comparaison bibliothèque,
+ * confirmations explicites.
  */
 export function TrackScreen() {
   const { ref = '' } = useParams<{ ref: string }>();
   const [resolved, setResolved] = useState(false);
+  const [candidates, setCandidates] = useState<AssociationCandidate[] | null>(
+    null,
+  );
+  const [searching, setSearching] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const analysis = loadPlaylistAnalysis(services.storage);
   const library = loadLibraryState(services.storage)?.tracks ?? [];
@@ -28,7 +40,7 @@ export function TrackScreen() {
 
   useEffect(() => {
     if (!track) return;
-    // Marque la route en attente comme lue (le deep link
+    // Marque la route en attente comme lue (le deep-link
     // a été consommé côté natif au démarrage).
     services.history.record(
       'app_start',
@@ -78,18 +90,67 @@ export function TrackScreen() {
     setResolved(true);
   };
 
+  /** Recherche de versions téléchargeables autorisées. */
+  const onFindVersions = async () => {
+    setSearching(true);
+    const found = await services.association.findDownloadableVersions(
+      { title: track.title, artist: track.artist },
+      library,
+      sourceId,
+      track.ref,
+    );
+    setCandidates(found);
+    setSearching(false);
+  };
+
+  const onDownloadCandidate = async (candidate: AssociationCandidate) => {
+    // Correspondance incertaine : confirmation explicite.
+    if (candidate.matchState === 'uncertain') {
+      const confirmed = window.confirm(fr.track.confirmUncertain);
+      if (!confirmed) return;
+    }
+    const provider = services.providers.getDownloadProvider(
+      candidate.item.providerId,
+    );
+    if (!provider || !candidate.item.downloadUrl) return;
+
+    const request = await provider.getDownloadRequest(candidate.item);
+    const folder = loadSettings(services.storage).downloadFolderUri;
+    await services.downloadEngine.enqueue(
+      {
+        providerId: candidate.item.providerId,
+        trackRef: candidate.item.ref,
+        title: candidate.item.title,
+        artist: candidate.item.artist,
+        sourceUrl: candidate.item.sourceUrl,
+        fileUrl: request.url,
+        displayName: request.displayName,
+        license: request.license,
+      },
+      folder || undefined,
+    );
+    services.history.record(
+      'sync_attempt',
+      'Téléchargement autorisé en file',
+      candidate.item.title,
+    );
+    setNotice(fr.track.queued);
+  };
+
   return (
     <section className="screen">
       <ScreenHeader title={fr.track.title} />
 
       <section className="card">
         {track.thumbnailUrl ? (
-          <img className="track-thumb track-thumb--large" src={track.thumbnailUrl} alt={fr.playlist.thumbnail} />
+          <img
+            className="track-thumb track-thumb--large"
+            src={track.thumbnailUrl}
+            alt={fr.playlist.thumbnail}
+          />
         ) : null}
         <h2 className="card__body">{track.title}</h2>
-        <p className="card__muted">
-          {track.artist || fr.track.artist}
-        </p>
+        <p className="card__muted">{track.artist || fr.track.artist}</p>
         <p className="card__muted">
           {fr.track.availability} : {fr.availability[track.availability]}
         </p>
@@ -121,6 +182,71 @@ export function TrackScreen() {
           </div>
         </section>
       )}
+
+      {/* Association : versions téléchargeables autorisées */}
+      <section className="card">
+        <h2 className="card__title">{fr.track.findVersion}</h2>
+        <button
+          className="btn-secondary"
+          type="button"
+          onClick={() => void onFindVersions()}
+          disabled={searching}
+        >
+          {searching ? fr.track.finding : fr.track.findVersion}
+        </button>
+
+        {candidates && candidates.length === 0 ? (
+          <p className="card__muted">{fr.track.candidatesNone}</p>
+        ) : null}
+
+        {candidates && candidates.length > 0 ? (
+          <ul className="result-list">
+            {candidates.map((candidate) => (
+              <li className="card" key={candidate.item.ref}>
+                <p className="card__body">
+                  {candidate.item.title} — {candidate.item.artist}
+                </p>
+                <p className="card__muted">
+                  {fr.track.provider} : {candidate.item.providerId} ·{' '}
+                  {fr.search.compareResult.replace('{state}', fr.match[candidate.matchState])}
+                  {candidate.score > 0 ? ` (${Math.round(candidate.score * 100)} %)` : ''}
+                </p>
+                {candidate.item.license ? (
+                  <p className="card__muted">
+                    {fr.search.license} : {candidate.item.license}
+                  </p>
+                ) : null}
+                <p className="card__muted">{candidate.reason}</p>
+                {candidate.excluded ? (
+                  <span className="badge badge-excluded">{fr.track.excludedNote}</span>
+                ) : null}
+                <div className="decision-actions">
+                  {candidate.eligible && candidate.item.downloadable ? (
+                    <button
+                      className="btn-primary"
+                      type="button"
+                      onClick={() => void onDownloadCandidate(candidate)}
+                    >
+                      {fr.track.queueDownload}
+                    </button>
+                  ) : null}
+                  <button
+                    className="btn-secondary"
+                    type="button"
+                    onClick={() =>
+                      void AmsNative.openUrl({ url: candidate.item.sourceUrl })
+                    }
+                  >
+                    {fr.search.openSource}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      {notice ? <div className="banner banner-info">{notice}</div> : null}
 
       <Link className="btn-secondary" to="/playlist">
         {fr.track.back}

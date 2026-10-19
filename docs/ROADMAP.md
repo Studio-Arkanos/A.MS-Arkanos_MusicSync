@@ -1,44 +1,44 @@
-# Feuille de route — fonctions restantes
+# Feuille de route
 
 ## Étape 1 — fondations ✅
-Architecture modulaire, interface 7 écrans, CI, plugin natif
- squelette, Room (piste).
+Architecture modulaire, interface 7 écrans, CI,
+plugin natif, Room (schéma).
 
 ## Étape 2 — playlist, bibliothèque, doublons, exclusions ✅
-- [x] Playlist initiale « Zenith » (URL modifiable, analyse,
-      remplacement, consultation)
-- [x] Analyse via YouTube Data API v3 officielle (clé requise) ;
-      vidéos supprimées/privées/indisponibles identifiées ;
-      playlist vide ≠ erreur
-- [x] Scan local : SAF (Android 11+) / chemin direct (≤ 10),
-      MP3/M4A/AAC/FLAC/OGG/WAV, nom de fichier seul suffisant
-- [x] Normalisation enrichie (qualité, promotionnels, marqueurs
-      de version conservés)
-- [x] Matching multi-critères avec seuils 95 %/80 % configurables
-      et trois états
-- [x] Exclusions manuelles : individuelles/groupées, persistantes,
-      réintégration, réinitialisation confirmée, filtres
-- [x] Planificateur de synchronisation (résumé avant opération)
-- [x] Décisions en attente + notifications natives avec deep-link
-      vers l'écran du morceau
-- [x] Schéma Room complet (exclusions, décisions, playlists)
-- [x] 85 tests unitaires (dont toutes les obligations du cahier)
+Playlist Zenith, analyse YouTube, scan SAF,
+normalisation avancée, matching multi-critères,
+exclusions persistantes, planificateur, décisions.
 
-## Étape 3 — téléchargements & arrière-plan
-- [ ] Pont web ↔ Room via AmsNative (persistance native unifiée)
-- [ ] Moteur de téléchargement réel (fournisseurs autorisés
-      uniquement, reprise, file d'attente)
-- [ ] Fournisseurs de recherche (catalogues autorisés)
+## Étape 3 — recherche, fournisseurs, téléchargements ✅
+- [x] Centre de recherche (titre/artiste/album/mots-clés/URL)
+- [x] Architecture de fournisseurs modulaire (5 interfaces,
+      capacités déclarées honnêtement)
+- [x] YouTube : recherche + métadonnées + liste de suivi
+      (jamais de téléchargement)
+- [x] Jamendo : recherche + téléchargement autorisé
+      (audiodownload_allowed, licences CC)
+- [x] Moteur de téléchargement natif (DownloadManager) :
+      file, progression réelle, annulation, reprise
+      système, vérification du résultat, anti-écrasement
+- [x] Association playlist ↔ fournisseurs autorisés
+- [x] Import d'URL vérifié (sonde native, refus des
+      pages non-audio, YouTube en ouverture seule)
+- [ ] Conversion audio : **non intégrée** — aucune
+      solution vérifiée compatible Android + MIT
+      (FFmpegKit évalué : licence incompatible,
+      build non vérifiable ici). Interface prête.
+
+## Étape 4 — finition & livraison
+- [ ] Exécution de la synchronisation globale
+      (orchestration scan → plan → téléchargements)
 - [ ] Tâches en arrière-plan (WorkManager)
+- [ ] Pont web ↔ Room (persistance native unifiée)
 - [ ] Permission POST_NOTIFICATIONS demandée au runtime
-      (dialogue système) si non accordée
-
-## Étape 4 — finition
-- [ ] Tests instrumentés Android (Room, plugin natif)
+- [ ] Tests instrumentés Android (device réel)
 - [ ] Build release (signing, Play Store)
-- [ ] Accessibilité complète (TalkBack), localisations supplémentaires
-- [ ] Performance sur appareils d'entrée de gamme (profil réel)
+- [ ] Accessibilité complète, localisations supplémentaires
 
-> Règle transversale : aucun module ne passe « operational »
-> avant d'être réellement branché — aucune donnée simulée
-> n'est jamais affichée.
+> Distinction honnête : développé et testé unitairement
+> dans ce sandbox (121 tests) ; le build APK et les
+> tests sur appareil réel sont exécutés par CI et
+> Android Studio — non réalisés dans cet environnement.

@@ -2,10 +2,9 @@ import { registerPlugin } from '@capacitor/core';
 
 /**
  * Contrat TypeScript du plugin Capacitor natif AmsNative.
- * Implémentation Kotlin dans android/app (MainActivity + plugins/).
+ * Implémentation Kotlin dans android/app (plugins/AmsNativePlugin.kt).
  * Sur le web (navigateur de développement), les appels échouent
- * proprement et les appelants gèrent l'indisponibilité —
- * aucune donnée n'est fabriquée.
+ * proprement — aucune donnée n'est fabriquée.
  */
 
 export interface ScannedFile {
@@ -15,13 +14,21 @@ export interface ScannedFile {
   mimeType?: string;
 }
 
+export interface DownloadStatusResult {
+  status: string; // queued | downloading | done | failed | cancelled
+  progressPercent: number;
+  bytesReceived: number;
+  totalBytes: number;
+  localUri: string;
+  mediaType: string;
+  reason: string;
+}
+
 export interface AmsNativePlugin {
-  /** Indique si la couche native est joignable (Android uniquement). */
   isNativeAvailable(): Promise<{ available: boolean; platform: string }>;
-  /** Informations appareil minimales. */
   getDeviceInfo(): Promise<{ platform: string; version: string }>;
 
-  /** Notification locale réelle (canal « décisions », ouvert l'écran du morceau). */
+  /** Notification locale réelle (canal « décisions », deep-link). */
   notify(options: {
     title: string;
     message: string;
@@ -31,20 +38,53 @@ export interface AmsNativePlugin {
 
   /** Sélecteur de dossier (Storage Access Framework). */
   pickFolder(): Promise<{ uri: string | null }>;
-
-  /** Dossier courant mémorisé. */
   getLastFolder(): Promise<{ uri: string | null }>;
 
-  /** Liste les fichiers audio d'un dossier (SAF ou parcours direct). */
+  /** Liste les fichiers audio d'un dossier (SAF / DocumentFile). */
   scanLibrary(options: {
     folderUri: string;
   }): Promise<{ files: ScannedFile[]; count: number }>;
 
-  /** Route en attente après ouverture depuis une notification. */
+  /** Route en attente après clic sur une notification. */
   getPendingRoute(): Promise<{ route: string; trackRef: string }>;
 
-  /** Planification d'une synchronisation périodique (étape 3). */
-  schedulePeriodicSync(options: { intervalMinutes: number }): Promise<{ scheduled: boolean }>;
+  /* ---------- Moteur de téléchargement (étape 3) ---------- */
+
+  /** Enfile un téléchargement via Android DownloadManager. */
+  enqueueDownload(options: {
+    url: string;
+    title: string;
+    artist: string;
+    displayName: string;
+    folderUri?: string;
+  }): Promise<{ nativeId: number }>;
+
+  /** État réel d'une tâche (DownloadManager.Query). */
+  getDownloadStatus(options: {
+    nativeId: number;
+  }): Promise<DownloadStatusResult>;
+
+  /** Annule une tâche (retire du DownloadManager). */
+  cancelDownload(options: { nativeId: number }): Promise<{ cancelled: boolean }>;
+
+  /** Un fichier existe-t-il déjà dans le dossier cible ? */
+  fileExists(options: {
+    folderUri: string;
+    name: string;
+  }): Promise<{ exists: boolean }>;
+
+  /** Ouvre une URL dans le navigateur/l'application source. */
+  openUrl(options: { url: string }): Promise<{ opened: boolean }>;
+
+  /** Sonde native (HEAD) : type de contenu d'une URL directe. */
+  probeUrl(options: {
+    url: string;
+  }): Promise<{ statusCode: number; contentType: string; contentLength: number }>;
+
+  /** Planification d'une synchronisation périodique (étape 4). */
+  schedulePeriodicSync(options: {
+    intervalMinutes: number;
+  }): Promise<{ scheduled: boolean }>;
 }
 
 const AmsNative = registerPlugin<AmsNativePlugin>('AmsNative');

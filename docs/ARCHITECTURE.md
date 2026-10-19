@@ -80,15 +80,55 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
   identité stable (sourceId + trackRef), persistantes,
   prime sur l'automatisme, réintégration explicite.
 
-### Fournisseurs de recherche (`src/modules/search/`)
-- Registre de `SearchProvider`. **Aucun fournisseur enregistré** :
-  `searchAll()` renvoie une liste vide réelle (étape 3).
+### Fournisseurs (`src/modules/providers/`) — étape 3
+- `SearchProvider` : recherche/découverte.
+- `MetadataProvider` : métadonnées complémentaires.
+- `AuthorizedDownloadProvider` : téléchargement quand
+  l'artiste et le fournisseur l'autorisent.
+- `PlaylistProvider` : analyse de playlists.
+- `LocalLibraryProvider` : comparaison avec les fichiers
+  locaux.
+- Capacités déclarées par fournisseur (`capabilities`) —
+  un fournisseur « recherche seule » n'est jamais présenté
+  comme fournisseur de téléchargement.
+- Intégrés : **Jamendo** (recherche + téléchargement
+  autorisé, CC) et **YouTube** (recherche + métadonnées
+  uniquement — jamais de téléchargement).
+- Voir [PROVIDERS.md](PROVIDERS.md).
 
-### Fournisseurs de téléchargement autorisés (`src/modules/download/`)
-- Liste blanche (`ALLOWED_DOWNLOAD_PROVIDERS`, vide) +
-  `DownloadManager` stub : refuse les téléchargements ET
-  refuse explicitement toute cible existante (jamais
-  d'écrasement).
+### Moteur de téléchargement (`src/modules/download/`)
+- **Android DownloadManager** (natif, robuste) : file
+  d'attente, progression réelle (octets), annulation,
+  reprise sur interruption réseau gérée par le système,
+  fichiers temporaires système, notifications système.
+- Vérification du résultat : statut + type MIME audio +
+  taille non nulle — un HTML reçu est un ÉCHEC, jamais
+  un succès.
+- Anti-écrasement : suffixe automatique côté web + garde
+  native (`DOWNLOAD_TARGET_EXISTS`).
+- Écriture sécurisée : dossier SAF choisi (permission
+  persistante) ou Téléchargements système.
+
+### Association playlist ↔ fournisseurs (`src/modules/association/`)
+- Recherche de versions téléchargeables autorisées d'un
+  morceau de playlist ; comparaison bibliothèque ;
+  incertitude → confirmation explicite ; exclusions
+  partie 2 toujours appliquées ; versions multiples
+  présentées distinctement.
+
+### Import d'URL (`src/modules/import/`)
+- Jamendo : résolution API officielle ; YouTube :
+  ouverture uniquement (jamais d'extraction) ; autre :
+  sonde native HEAD — seules les ressources audio directes
+  acceptées. Aucun contournement de paywall/DRM.
+
+### Conversion (`src/modules/conversion/`)
+- Non intégrée (voir TECHNOLOGIES.md) : aucune solution
+  vérifiée compatible Android + MIT. JAMAIS simulée.
+
+### Liste de suivi (`src/modules/watchlist/`)
+- Morceaux YouTube suivis ; disponibilité vérifiée via
+  l'API officielle (privé/supprimé signalé).
 
 ### Analyse de playlist (`src/modules/playlist/`)
 - Playlist initiale « Zenith », URL modifiable.

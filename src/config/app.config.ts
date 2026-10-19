@@ -10,11 +10,11 @@ export const APP = {
 } as const;
 
 /**
- * Statut réel de chaque fonctionnalité à l'étape 2.
+ * Statut réel de chaque fonctionnalité à l'étape 3.
  * Règle : jamais de statut « operational » sans implémentation réelle.
  */
 export const FEATURES: Record<string, { status: ModuleStatus; label: string }> = {
-  syncEngine: { status: 'stub', label: 'Moteur de synchronisation (exécution — étape 3)' },
+  syncEngine: { status: 'stub', label: 'Exécution de synchronisation (étape 4)' },
   playlistAnalysis: { status: 'operational', label: 'Analyse de playlist (YouTube Data API v3)' },
   playlists: { status: 'operational', label: 'Playlists' },
   localScan: { status: 'operational', label: 'Scan de la bibliothèque locale (SAF)' },
@@ -22,12 +22,16 @@ export const FEATURES: Record<string, { status: ModuleStatus; label: string }> =
   duplicates: { status: 'operational', label: 'Détection des doublons' },
   exclusions: { status: 'operational', label: 'Gestion des exclusions (persistantes)' },
   decisions: { status: 'operational', label: 'Décisions en attente' },
-  searchProviders: { status: 'planned', label: 'Fournisseurs de recherche' },
-  downloadProviders: { status: 'planned', label: 'Fournisseurs de téléchargement autorisés' },
+  searchProviders: { status: 'operational', label: 'Recherche (Jamendo + YouTube)' },
+  downloadProviders: { status: 'operational', label: 'Téléchargement autorisé (Jamendo, DownloadManager)' },
   notifications: { status: 'operational', label: 'Notifications (natif)' },
   backgroundTasks: { status: 'stub', label: 'Tâches en arrière-plan' },
-  database: { status: 'operational', label: 'Base locale (Room prêt, pont étape 3)' },
+  database: { status: 'operational', label: 'Base locale (Room prêt, pont étape 4)' },
   history: { status: 'operational', label: 'Historique des opérations' },
+  conversion: { status: 'planned', label: 'Conversion audio (aucune solution vérifiée)' },
+  urlImport: { status: 'operational', label: 'Import d’URL vérifié' },
+  watchlist: { status: 'operational', label: 'Liste de suivi' },
+  association: { status: 'operational', label: 'Association playlist ↔ fournisseurs' },
 };
 
 /** Dossier de bibliothèque locale par défaut (cahier des charges). */

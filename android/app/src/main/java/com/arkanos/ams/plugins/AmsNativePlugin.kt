@@ -1,6 +1,7 @@
 package com.arkanos.ams.plugins
 
 import android.app.Activity
+import android.app.DownloadManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
@@ -18,19 +20,27 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.arkanos.ams.MainActivity
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Plugin Capacitor personnalisé d'A.MS.
  *
- * Étape 2 :
+ * Étape 3 :
  *  - isNativeAvailable / getDeviceInfo : réels ;
  *  - pickFolder : Storage Access Framework (Android 11+) ;
- *  - scanLibrary : parcours réel du dossier (DocumentFile),
- *    formats MP3/M4A/AAC/FLAC/OGG/WAV ;
- *  - notify : notification locale réelle, canal « décisions »,
- *    ouverture de l'écran du morceau concerné ;
- *  - getPendingRoute : route en attente après clic notification ;
- *  - schedulePeriodicSync : WorkManager (étape 3).
+ *  - scanLibrary : parcours réel (DocumentFile),
+ *    MP3/M4A/AAC/FLAC/OGG/WAV ;
+ *  - notify : notification locale réelle (canal « décisions »,
+ *    deep-link vers l'écran du morceau) ;
+ *  - getPendingRoute : route en attente après notification ;
+ *  - enqueueDownload / getDownloadStatus / cancelDownload :
+ *    moteur de téléchargement réel via Android DownloadManager
+ *    (reprise sur interruption gérée par le système) ;
+ *  - fileExists : prévention de l'écrasement ;
+ *  - openUrl : ouverture de la source (navigateur / appli) ;
+ *  - probeUrl : sonde HEAD (type de contenu) pour l'import d'URL ;
+ *  - schedulePeriodicSync : WorkManager (étape 4).
  */
 @CapacitorPlugin(name = "AmsNative")
 class AmsNativePlugin : Plugin() {
@@ -39,15 +49,15 @@ class AmsNativePlugin : Plugin() {
         const val CHANNEL_DECISIONS = "ams_decisions"
         private const val REQUEST_PICK_FOLDER = 41001
         private const val PREFS = "ams_prefs"
-        private const val KEY_PENDING_ROUTE = "pendingRoute"
-        private const val KEY_PENDING_TRACK_REF = "pendingTrackRef"
+        const val KEY_PENDING_ROUTE = "pendingRoute"
+        const val KEY_PENDING_TRACK_REF = "pendingTrackRef"
         private const val KEY_LAST_FOLDER = "lastFolder"
     }
 
-    private var pendingFolderCall: PluginCall? = null
-
     private val audioExtensions =
         setOf(".mp3", ".m4a", ".aac", ".flac", ".ogg", ".wav")
+
+    private var pendingFolderCall: PluginCall? = null
 
     @PluginMethod(returnType = PluginMethod.RETURN_NONE)
     fun isNativeAvailable(call: PluginCall) {
@@ -204,6 +214,206 @@ class AmsNativePlugin : Plugin() {
         return audioExtensions.any { lower.endsWith(it) }
     }
 
+    /* ---------------- Moteur de téléchargement (DownloadManager) ---------------- */
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun enqueueDownload(call: PluginCall) {
+        val url = call.getString("url")
+        val title = call.getString("title") ?: ""
+        val artist = call.getString("artist") ?: ""
+        val displayName = call.getString("displayName")
+        val folderUri = call.getString("folderUri")
+
+        if (url.isNullOrBlank() || displayName.isNullOrBlank()) {
+            call.reject("DOWNLOAD_MISSING_PARAMS: url et displayName requis.")
+            return
+        }
+
+        try {
+            val request = DownloadManager.Request(Uri.parse(url))
+            request.setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            )
+            request.setTitle(title.ifBlank { displayName })
+            request.setDescription(artist)
+            request.setAllowedNetworkTypes(
+                DownloadManager.Request.NETWORK_WIFI or
+                    DownloadManager.Request.NETWORK_MOBILE
+            )
+            request.setAllowedOverMetered(true)
+            request.setAllowedOverRoaming(false)
+
+            val destination: Uri? =
+                if (folderUri != null) {
+                    // Écriture sécurisée dans le dossier SAF choisi.
+                    val tree = DocumentFile.fromTreeUri(context, Uri.parse(folderUri))
+                    if (tree == null || !tree.exists()) {
+                        call.reject("DOWNLOAD_FOLDER_INACCESSIBLE")
+                        return
+                    }
+                    // Anti-écrasement : refus natif si la cible existe.
+                    if (tree.findFile(displayName) != null) {
+                        call.reject("DOWNLOAD_TARGET_EXISTS: $displayName existe déjà.")
+                        return
+                    }
+                    val created = tree.createFile("audio/*", displayName)
+                    if (created == null) {
+                        call.reject("DOWNLOAD_CREATE_FILE_FAILED: $displayName")
+                        return
+                    }
+                    created.uri
+                } else null
+
+            if (destination != null) {
+                request.setDestinationUri(destination)
+            } else {
+                request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    displayName
+                )
+            }
+            request.setMimeType("audio/*")
+
+            val manager = context.getSystemService(Context.DOWNLOAD_SERVICE)
+                as DownloadManager
+            val nativeId = manager.enqueue(request)
+            val result = JSObject().apply { put("nativeId", nativeId) }
+            call.resolve(result)
+        } catch (e: SecurityException) {
+            call.reject("DOWNLOAD_PERMISSION_DENIED: ${e.message}")
+        } catch (e: Exception) {
+            call.reject("DOWNLOAD_ENQUEUE_FAILED: ${e.message}")
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun getDownloadStatus(call: PluginCall) {
+        val nativeId = call.getLong("nativeId") ?: run {
+            call.reject("DOWNLOAD_MISSING_ID")
+            return
+        }
+        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE)
+            as DownloadManager
+        val cursor = manager.query(DownloadManager.Query().setFilterById(nativeId))
+        cursor.use {
+            if (!it.moveToFirst()) {
+                call.reject("DOWNLOAD_NOT_FOUND")
+                return
+            }
+            val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+            val reasonColumn = it.getColumnIndex(DownloadManager.COLUMN_REASON)
+            val reason = if (reasonColumn >= 0 && !it.isNull(reasonColumn)) {
+                it.getString(reasonColumn) ?: ""
+            } else ""
+            val bytesColumn = it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+            val totalColumn = it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            val uriColumn = it.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+            val mediaTypeColumn = it.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE)
+
+            val bytesReceived = it.getLong(bytesColumn)
+            val totalBytes = it.getLong(totalColumn)
+            val localUri = if (uriColumn >= 0 && !it.isNull(uriColumn)) it.getString(uriColumn) ?: "" else ""
+            val mediaType = if (mediaTypeColumn >= 0 && !it.isNull(mediaTypeColumn)) it.getString(mediaTypeColumn) ?: "" else ""
+            val progress = if (totalBytes > 0) (bytesReceived * 100 / totalBytes).toInt() else 0
+
+            val statusName = when (status) {
+                DownloadManager.STATUS_RUNNING -> "downloading"
+                DownloadManager.STATUS_PAUSED -> "paused"
+                DownloadManager.STATUS_SUCCESSFUL -> "done"
+                DownloadManager.STATUS_FAILED -> "failed"
+                DownloadManager.STATUS_PENDING -> "queued"
+                else -> "unknown"
+            }
+
+            val result = JSObject().apply {
+                put("status", statusName)
+                put("progressPercent", progress)
+                put("bytesReceived", bytesReceived)
+                put("totalBytes", totalBytes)
+                put("localUri", localUri)
+                put("mediaType", mediaType)
+                put("reason", reason)
+            }
+            call.resolve(result)
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun cancelDownload(call: PluginCall) {
+        val nativeId = call.getLong("nativeId") ?: run {
+            call.reject("DOWNLOAD_MISSING_ID")
+            return
+        }
+        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE)
+            as DownloadManager
+        val removed = manager.remove(nativeId)
+        val result = JSObject().apply { put("cancelled", removed > 0) }
+        call.resolve(result)
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun fileExists(call: PluginCall) {
+        val folderUri = call.getString("folderUri")
+        val name = call.getString("name")
+        if (folderUri.isNullOrBlank() || name.isNullOrBlank()) {
+            call.reject("FILE_EXISTS_MISSING_PARAMS")
+            return
+        }
+        val tree = DocumentFile.fromTreeUri(context, Uri.parse(folderUri))
+        val exists = tree?.findFile(name) != null
+        val result = JSObject().apply { put("exists", exists) }
+        call.resolve(result)
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun openUrl(call: PluginCall) {
+        val url = call.getString("url")
+        if (url.isNullOrBlank()) {
+            call.reject("OPEN_URL_MISSING")
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            val result = JSObject().apply { put("opened", true) }
+            call.resolve(result)
+        } catch (e: Exception) {
+            val result = JSObject().apply {
+                put("opened", false)
+                put("reason", "OPEN_URL_FAILED: ${e.message}")
+            }
+            call.resolve(result)
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun probeUrl(call: PluginCall) {
+        val url = call.getString("url")
+        if (url.isNullOrBlank()) {
+            call.reject("PROBE_MISSING_URL")
+            return
+        }
+        try {
+            val connection = URL(url).openConnection() as HttpURLConnection
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 10_000
+            val statusCode = connection.responseCode
+            val contentType = connection.contentType ?: ""
+            val contentLength = connection.contentLengthLong
+            connection.disconnect()
+            val result = JSObject().apply {
+                put("statusCode", statusCode)
+                put("contentType", contentType)
+                put("contentLength", contentLength)
+            }
+            call.resolve(result)
+        } catch (e: Exception) {
+            call.reject("PROBE_FAILED: ${e.message}")
+        }
+    }
+
     /* ---------------- Deep-link après notification ---------------- */
 
     @PluginMethod(returnType = PluginMethod.RETURN_NONE)
@@ -220,12 +430,12 @@ class AmsNativePlugin : Plugin() {
         call.resolve(result)
     }
 
-    /* ---------------- Arrière-plan (étape 3) ---------------- */
+    /* ---------------- Arrière-plan (étape 4) ---------------- */
 
     @PluginMethod(returnType = PluginMethod.RETURN_NONE)
     fun schedulePeriodicSync(call: PluginCall) {
         call.reject(
-            "BACKGROUND_NOT_IMPLEMENTED : WorkManager sera branché à l'étape 3."
+            "BACKGROUND_NOT_IMPLEMENTED : WorkManager sera branché à l'étape 4."
         )
     }
 

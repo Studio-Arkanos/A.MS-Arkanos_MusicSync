@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DEFAULT_PLAYLIST,
   type PlaylistAnalysis,
@@ -36,6 +37,7 @@ import type { Filter, FilterKey } from '../components/playlistFilters';
  *  - aucun téléchargement n'est lancé ici (moteur étape 3).
  */
 export function PlaylistScreen() {
+  const navigate = useNavigate();
   const [config, setConfig] = useState<PlaylistConfig>(() =>
     loadPlaylistConfig(services.storage, DEFAULT_PLAYLIST),
   );
@@ -364,6 +366,7 @@ export function PlaylistScreen() {
                 onExclude={() => onExclude(plan)}
                 onRestore={() => onRestore(plan)}
                 onDecide={(resolution) => onDecide(plan, resolution)}
+                onFindVersion={() => navigate(`/track/${plan.track.ref}`)}
               />
             ))}
           </ul>
@@ -435,6 +438,7 @@ function TrackRow({
   onExclude,
   onRestore,
   onDecide,
+  onFindVersion,
 }: {
   plan: TrackPlan;
   selected: boolean;
@@ -442,6 +446,7 @@ function TrackRow({
   onExclude: () => void;
   onRestore: () => void;
   onDecide: (resolution: 'present' | 'download' | 'ignore') => void;
+  onFindVersion: () => void;
 }) {
   const track = plan.track;
   return (
@@ -525,6 +530,11 @@ function TrackRow({
               {fr.playlist.exclude}
             </button>
           )}
+          {plan.matchState !== 'unavailable' && !plan.excluded ? (
+            <button className="btn-secondary" type="button" onClick={onFindVersion}>
+              {fr.track.findVersion}
+            </button>
+          ) : null}
         </div>
       </div>
     </li>
