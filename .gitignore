@@ -33,3 +33,4 @@ coverage/
 # Captures d'écran Capacitor
 capture-*.jpg
 capture-*.png
+*.tsbuildinfo
