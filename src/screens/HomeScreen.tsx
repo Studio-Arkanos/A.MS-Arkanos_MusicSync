@@ -4,6 +4,7 @@ import { fr } from '../i18n/fr';
 import { services } from '../app/services';
 import { loadLibraryState } from '../app/libraryState';
 import { loadPlaylistAnalysis } from '../app/playlistState';
+import type { SyncProgress, SyncReport } from '../modules/sync/SyncEngine';
 import { ProgressBar } from '../components/ProgressBar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatCard } from '../components/StatCard';
@@ -14,12 +15,17 @@ import type { OperationRecord } from '../domain/models';
  * Écran Accueil — tableau de bord.
  * Toutes les valeurs sont RÉELLES (calculées depuis les
  * analyses, scans, exclusions et décisions persistés).
- * Le bouton de synchronisation reste désactivé : l’exécution
- * des téléchargements arrive à l’étape 3.
+ * « Synchroniser maintenant » exécute l'orchestration
+ * réelle : plan → association → file de téléchargement
+ * native (étape 4).
  */
 export function HomeScreen() {
   const [lastOperation, setLastOperation] = useState<OperationRecord | null>(null);
   const [pendingDecisions, setPendingDecisions] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [progress, setProgress] = useState<SyncProgress | null>(null);
+  const [report, setReport] = useState<SyncReport | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     services.history
@@ -28,6 +34,8 @@ export function HomeScreen() {
       .catch(() => setLastOperation(null));
     setPendingDecisions(services.decisions.listPending().length);
   }, []);
+
+  useEffect(() => services.syncEngine.subscribe(setProgress), []);
 
   // Relecture des états persistés (réel, jamais simulé).
   const dashboard = useMemo(() => {
@@ -49,6 +57,25 @@ export function HomeScreen() {
   }, []);
 
   const summary = dashboard.summary;
+
+  const onSync = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    setReport(null);
+    try {
+      const result = await services.syncEngine.sync();
+      setReport(result);
+      services.history.record(
+        'sync_attempt',
+        'Synchronisation exécutée',
+        `${result.downloaded} téléchargement(s) enfilé(s)`,
+      );
+    } catch (error) {
+      setSyncError((error as Error).message);
+      services.history.record('sync_error', 'Échec de synchronisation', (error as Error).message);
+    }
+    setSyncing(false);
+  };
 
   return (
     <section className="screen">
@@ -82,8 +109,15 @@ export function HomeScreen() {
 
       <section className="card">
         <h2 className="card__title">{fr.home.syncProgress}</h2>
-        <p className="card__muted">{fr.home.idle}</p>
-        <ProgressBar percent={0} label={fr.home.syncProgress} />
+        <p className="card__muted">
+          {progress?.message
+            ? `${fr.home.phase}: ${progress.message}`
+            : fr.home.idle}
+        </p>
+        <ProgressBar
+          percent={progress?.percent ?? 0}
+          label={progress ? `${progress.phase} — ${progress.percent} %` : fr.home.syncProgress}
+        />
       </section>
 
       <section className="card">
@@ -98,9 +132,32 @@ export function HomeScreen() {
         )}
       </section>
 
-      <PrimaryButton disabled={!SYNC_ENGINE_READY} disabledReason={fr.home.engineNotReady}>
-        {fr.home.syncNow}
+      <PrimaryButton disabled={!SYNC_ENGINE_READY || syncing} disabledReason={fr.home.engineNotReady} onClick={() => void onSync()}>
+        {syncing ? fr.home.syncing : fr.home.syncNow}
       </PrimaryButton>
+
+      {syncError ? <div className="banner banner-error">{syncError}</div> : null}
+
+      {report ? (
+        <section className="card">
+          <h2 className="card__title">{fr.home.syncReport}</h2>
+          <div className="summary-grid">
+            <span>{fr.home.analyzed} : {report.analyzed}</span>
+            <span>{fr.home.present} : {report.alreadyPresent}</span>
+            <span>{fr.home.toDownload} : {report.toDownload}</span>
+            <span>{fr.home.downloaded} : {report.downloaded}</span>
+            <span>{fr.home.excluded} : {report.excluded}</span>
+            <span>{fr.home.uncertain} : {report.pendingDecisions}</span>
+          </div>
+          {report.errors.length > 0 ? (
+            <ul className="report-errors">
+              {report.errors.map((errorItem, index) => (
+                <li key={index}>{errorItem}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card">
         <h2 className="card__title">{fr.home.upcoming}</h2>

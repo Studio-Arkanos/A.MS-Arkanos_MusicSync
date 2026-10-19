@@ -10,11 +10,11 @@ export const APP = {
 } as const;
 
 /**
- * Statut réel de chaque fonctionnalité à l'étape 3.
+ * Statut réel de chaque fonctionnalité à l'étape 4.
  * Règle : jamais de statut « operational » sans implémentation réelle.
  */
 export const FEATURES: Record<string, { status: ModuleStatus; label: string }> = {
-  syncEngine: { status: 'stub', label: 'Exécution de synchronisation (étape 4)' },
+  syncEngine: { status: 'operational', label: 'Exécution de synchronisation (orchestration réelle)' },
   playlistAnalysis: { status: 'operational', label: 'Analyse de playlist (YouTube Data API v3)' },
   playlists: { status: 'operational', label: 'Playlists' },
   localScan: { status: 'operational', label: 'Scan de la bibliothèque locale (SAF)' },
@@ -24,24 +24,29 @@ export const FEATURES: Record<string, { status: ModuleStatus; label: string }> =
   decisions: { status: 'operational', label: 'Décisions en attente' },
   searchProviders: { status: 'operational', label: 'Recherche (Jamendo + YouTube)' },
   downloadProviders: { status: 'operational', label: 'Téléchargement autorisé (Jamendo, DownloadManager)' },
-  notifications: { status: 'operational', label: 'Notifications (natif)' },
-  backgroundTasks: { status: 'stub', label: 'Tâches en arrière-plan' },
-  database: { status: 'operational', label: 'Base locale (Room prêt, pont étape 4)' },
+  notifications: { status: 'operational', label: 'Notifications (permission runtime Android 13+)' },
+  backgroundTasks: { status: 'operational', label: 'Arrière-plan (WorkManager — analyse périodique)' },
+  database: { status: 'operational', label: 'Base locale (persistance WebView ; Room prêt)' },
   history: { status: 'operational', label: 'Historique des opérations' },
   conversion: { status: 'planned', label: 'Conversion audio (aucune solution vérifiée)' },
   urlImport: { status: 'operational', label: 'Import d’URL vérifié' },
   watchlist: { status: 'operational', label: 'Liste de suivi' },
   association: { status: 'operational', label: 'Association playlist ↔ fournisseurs' },
+  player: { status: 'operational', label: 'Lecteur (fichiers locaux uniquement)' },
+  favorites: { status: 'operational', label: 'Favoris' },
+  userPlaylists: { status: 'operational', label: 'Playlists utilisateur' },
+  diagnostics: { status: 'operational', label: 'Diagnostic (état réel des composants)' },
 };
 
 /** Dossier de bibliothèque locale par défaut (cahier des charges). */
 export const DEFAULT_LIBRARY_FOLDER = '/storage/emulated/0/Music/Musics';
 
 /**
- * Le moteur de synchronisation n'est PAS opérationnel à l'étape 1.
- * Le bouton « Synchroniser maintenant » doit rester désactivé.
+ * Le moteur de synchronisation est RÉEL (étape 4) :
+ * orchestration plan → association → file native.
+ * L'exécution des téléchargements requiert Android.
  */
-export const SYNC_ENGINE_READY = false;
+export const SYNC_ENGINE_READY = true;
 
 /** Fournisseurs de recherche enregistrés (aucun à l'étape 1). */
 export const SEARCH_PROVIDERS: SearchProviderId[] = [];

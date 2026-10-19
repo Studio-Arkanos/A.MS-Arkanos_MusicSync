@@ -170,7 +170,13 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
 
 ### Pont natif (`src/plugins/amsNative.ts` ↔ `AmsNativePlugin.kt`)
 - `isNativeAvailable`, `getDeviceInfo` (réels dès l'étape 1) ;
-  `notify`, `scanLibrary`, `schedulePeriodicSync` (stubs honnêtes).
+  `notify`, `scanLibrary` (réels) ;
+- `requestNotificationPermission` /
+  `getNotificationPermissionStatus` (Android 13+) ;
+- `schedulePeriodicSync` / `cancelPeriodicSync` /
+  `isPeriodicSyncScheduled` (WorkManager réel) ;
+- `schedulePeriodicSync` n'exécute rien par lui-même :
+  il planifie l'analyse périodique.
 
 ### Lecteur (`src/modules/player/` + `AmsPlayerPlugin.kt`) — **opérationnel**
 - MediaPlayer Android : play/pause/stop/seekTo/getStatus ;
@@ -188,6 +194,35 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
   au moment de la lecture (non résolu = ignoré,
   jamais remplacé par une fausse source).
 
+### Orchestration de synchronisation (`src/modules/sync/NativeSyncEngine.ts`) — **opérationnelle**
+- Analyse de playlist persistée → planification
+  (SyncPlanner : exclusions et décisions premières)
+  → association (PlaylistAssociation) → file
+  DownloadManager ;
+- un seul enfilement par candidat éligible ;
+- erreurs par morceau collectées dans le rapport,
+  jamais masquées ;
+- progression réelle (phases + %) par abonnement.
+
+### Arrière-plan (WorkManager)
+- `AmsScanWorker` (CoroutineWorker) : analyse
+  périodique réelle de la bibliothèque (URI SAF
+  persistée) + notification du résultat ;
+- contraintes honnêtes : réseau connecté, batterie
+  non faible, intervalle 12 h — **aucune heure
+  exacte garantie** par Android ;
+- l'orchestration complète (playlist → téléchargements)
+  reste pilotée depuis l'application ouverte.
+
+### Diagnostic (`src/modules/diagnostics/`)
+- État réel dérivé de sondes concrètes (natif,
+  stockage, configuration) — jamais « tout
+  opérationnel » par défaut ;
+- états : opérationnel, limité, indisponible,
+  autorisation requise, erreur, non testé ;
+- rapport exportable (JSON, données de
+  configuration uniquement).
+
 ## Flux de données (étape 2, en place)
 
 ```
@@ -200,6 +235,9 @@ scan local (SAF / DocumentFile) → normalisation (nom de fichier)
   → plan : présent / incertain (décision) / absent (candidat)
   → résumé affiché AVANT toute opération
   → téléchargements (liste blanche — étape 3) → Room → historique
+  → orchestration (étape 4) : association fournisseurs
+    autorisés → DownloadManager → rapport réel
+  → arrière-plan : WorkManager analyse périodique
 ```
 
 ### Persistance (étape 2)

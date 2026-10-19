@@ -5,7 +5,6 @@ import {
   HistoryIcon,
   HomeIcon,
   LibraryIcon,
-  MusicIcon,
   PlaylistIcon,
   SearchIcon,
   SettingsIcon,
@@ -13,6 +12,7 @@ import {
 import { fr } from '../i18n/fr';
 import AmsNative from '../plugins/amsNative';
 import { MiniPlayer } from '../components/MiniPlayer';
+import { Logo, ArkanosSignature } from '../components/Logo';
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/icons';
 
@@ -50,11 +50,14 @@ export function MainTabs() {
     <div className="app-shell">
       <header className="app-header">
         <span className="app-header__logo">
-          <MusicIcon size={20} />
+          <Logo size={22} />
         </span>
         <div className="app-header__titles">
           <span className="app-header__name">{fr.app.name}</span>
-          <span className="app-header__fullname">{fr.app.fullName}</span>
+          <span className="app-header__fullname">
+            <ArkanosSignature size={9} />
+            {' '}{fr.app.fullName}
+          </span>
         </div>
         <span className="app-header__badge">{fr.app.stepBadge}</span>
       </header>

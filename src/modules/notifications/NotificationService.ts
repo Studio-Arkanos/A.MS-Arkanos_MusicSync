@@ -1,35 +1,54 @@
+import { Capacitor } from '@capacitor/core';
+import AmsNative from '../../plugins/amsNative';
+
 /**
  * Notifications.
  *
- * Étape 2 : implémentation native RÉELLE (canal Android
+ * Implémentation native RÉELLE (canal Android
  * « décisions », deep-link vers l'écran du morceau).
- * Sur le web (navigateur de développement), l'appel échoue
- * proprement — jamais de notification signalée comme envoyée
- * si elle ne l'est pas.
+ * Android 13+ : la permission POST_NOTIFICATIONS
+ * est demandée au RUNTIME avant l'envoi — jamais
+ * supposée acquise.
+ *
+ * Sur le web (navigateur de développement), les
+ * appels échouent proprement — aucune notification
+ * n'est jamais signalée comme envoyée si elle
+ * ne l'est pas.
  */
 
-import AmsNative from '../../plugins/amsNative';
-
-export interface NotificationPayload {
-  title: string;
-  body: string;
-  /** Route web ouverte au clic (ex. /track/<ref>). */
-  route?: string;
-  /** Référence stable du morceau concerné. */
-  trackRef?: string;
-}
-
-export interface NotificationResult {
-  delivered: boolean;
-  reason?: string;
-}
+import type { NotificationPayload, NotificationResult } from './types';
 
 export interface NotificationService {
+  /** Demande la permission runtime (Android 13+). */
+  ensurePermission(): Promise<boolean>;
   notify(payload: NotificationPayload): Promise<NotificationResult>;
 }
 
 export class NativeNotificationService implements NotificationService {
+  /**
+   * Vrai si la notification peut être envoyée :
+   * Android < 13 (pas de permission), permission
+   * déjà accordée, ou accord accordé à la demande.
+   */
+  async ensurePermission(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+    try {
+      const { granted } = await AmsNative.requestNotificationPermission();
+      return granted;
+    } catch {
+      return false;
+    }
+  }
+
   async notify(payload: NotificationPayload): Promise<NotificationResult> {
+    // Android 13+ : demande runtime si nécessaire.
+    const permission = await this.ensurePermission();
+    if (!permission && Capacitor.isNativePlatform()) {
+      return {
+        delivered: false,
+        reason: 'NOTIFICATIONS_PERMISSION_DENIED',
+      };
+    }
     try {
       const result = await AmsNative.notify({
         title: payload.title,

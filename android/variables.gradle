@@ -17,4 +17,5 @@ ext {
     // A.MS — versions verrouillées (Studio-Arkanos)
     kotlinVersion = '2.1.21'
     roomVersion = '2.6.1'
+    workManagerVersion = '2.9.0'
 }

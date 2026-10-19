@@ -72,7 +72,7 @@ android/
 ```bash
 npm test
 ```
-Couverture (165 tests, étape 3+) :
+Couverture (178 tests, étape 4) :
 - normalisation : exemples du cahier (4 variantes
   « Gims - Spider » → « gims spider »), qualité,
   promotionnels, marqueurs de version conservés ;
@@ -94,13 +94,26 @@ Couverture (165 tests, étape 3+) :
   pause/reprise, avance rapide, fin automatique,
   erreurs honnêtes ;
 - favoris et playlists utilisateur : CRUD, persistance
-  (redémarrage), stockage corrompu ignoré.
+  (redémarrage), stockage corrompu ignoré ;
+- orchestration de synchronisation : exclusions premières,
+  incertains jamais téléchargés, un enfilement par
+  candidat, échecs collectés, progression publiée ;
+- diagnostic : dérivation d'états réels, aucun
+  « opérationnel » usurpé, export sans données
+  personnelles.
 
 ## CI (GitHub Actions)
 
 `.github/workflows/ci.yml` :
 - Job `web` : lint, typecheck, tests, build.
-- Job `android` : build de l'APK de débogage + artefact téléchargeable.
+- Job `android` : build de l'APK de débogage + artefact.
+
+`.github/workflows/android-apk.yml` :
+- Job `debug-apk` : vérifications → build web →
+  cap sync → `assembleDebug` → **A-MS-debug.apk**
+  (artefact, vérifié non vide) ;
+- Job `release-apk` (manuel, secrets requis) :
+  APK release signé.
 
 ## Conventions de commits
 
@@ -114,5 +127,7 @@ Commits conventionnels, ex. :
   Android 36 via Android Studio (`sdkmanager "platforms;android-36"`).
 - **Capacitor ne voit pas les dernières modifications** :
   `npm run build && npx cap sync android`.
-- **Le bouton « Synchroniser maintenant » est grisé** : c'est
-  intentionnel à l'étape 1 (`SYNC_ENGINE_READY = false`).
+- **Le bouton « Synchroniser maintenant » est grisé** :
+  plus le cas à l'étape 4 (moteur réel) — s'il est
+  grisé, c'est que l'exécution requiert Android
+  (`SYNC_NOT_NATIVE`).

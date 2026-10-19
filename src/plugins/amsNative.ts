@@ -26,7 +26,14 @@ export interface DownloadStatusResult {
 
 export interface AmsNativePlugin {
   isNativeAvailable(): Promise<{ available: boolean; platform: string }>;
-  getDeviceInfo(): Promise<{ platform: string; version: string }>;
+  getDeviceInfo(): Promise<{
+    platform: string;
+    version: string;
+    sdkInt: number;
+  }>;
+
+  /** État réel de la permission POST_NOTIFICATIONS (sans demander). */
+  getNotificationPermissionStatus(): Promise<{ granted: boolean }>;
 
   /** Notification locale réelle (canal « décisions », deep-link). */
   notify(options: {
@@ -35,6 +42,9 @@ export interface AmsNativePlugin {
     route?: string;
     trackRef?: string;
   }): Promise<{ delivered: boolean; id?: number }>;
+
+  /** Demande runtime POST_NOTIFICATIONS (Android 13+). */
+  requestNotificationPermission(): Promise<{ granted: boolean }>;
 
   /** Sélecteur de dossier (Storage Access Framework). */
   pickFolder(): Promise<{ uri: string | null }>;
@@ -81,10 +91,21 @@ export interface AmsNativePlugin {
     url: string;
   }): Promise<{ statusCode: number; contentType: string; contentLength: number }>;
 
-  /** Planification d'une synchronisation périodique (étape 4). */
+  /* ---------- Arrière-plan WorkManager (étape 4) ---------- */
+
+  /**
+   * Planifie l'analyse périodique réelle (WorkManager).
+   * Aucune heure exacte n'est jamais garantie.
+   */
   schedulePeriodicSync(options: {
-    intervalMinutes: number;
-  }): Promise<{ scheduled: boolean }>;
+    folderUri: string;
+  }): Promise<{ scheduled: boolean; intervalHours: number; exact: boolean }>;
+
+  /** Annule la planification. */
+  cancelPeriodicSync(): Promise<{ cancelled: boolean }>;
+
+  /** État réel de la planification. */
+  isPeriodicSyncScheduled(): Promise<{ scheduled: boolean }>;
 }
 
 const AmsNative = registerPlugin<AmsNativePlugin>('AmsNative');

@@ -37,6 +37,9 @@ export function LibraryScreen() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, bumpFavorites] = useReducer((n: number) => n + 1, 0);
+  // Affichage progressif : bibliothèques volumineuses
+  // sur téléphones d'entrée de gamme.
+  const [visibleCount, setVisibleCount] = useState(100);
 
   const onPickFolder = async () => {
     setError(null);
@@ -206,20 +209,34 @@ export function LibraryScreen() {
             </button>
           </div>
           <ul className="track-list">
-            {state.tracks.map((track) => (
-              <LibraryTrackRow
-                key={track.id}
-                track={track}
-                playing={
-                  services.player.current?.id === track.id &&
-                  services.player.state === 'playing'
-                }
-                isFavorite={services.favorites.isFavorite(track.id)}
-                onPlay={() => playTrack(track.id)}
-                onToggleFavorite={() => onToggleFavorite(track)}
-              />
-            ))}
+            {state.tracks
+              .slice(0, visibleCount)
+              .map((track) => (
+                <LibraryTrackRow
+                  key={track.id}
+                  track={track}
+                  playing={
+                    services.player.current?.id === track.id &&
+                    services.player.state === 'playing'
+                  }
+                  isFavorite={services.favorites.isFavorite(track.id)}
+                  onPlay={() => playTrack(track.id)}
+                  onToggleFavorite={() => onToggleFavorite(track)}
+                />
+              ))}
           </ul>
+          {visibleCount < state.tracks.length ? (
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => setVisibleCount((count) => count + 100)}
+            >
+              {fr.library.showMore.replace(
+                '{n}',
+                String(state.tracks.length - visibleCount),
+              )}
+            </button>
+          ) : null}
         </>
       ) : null}
 

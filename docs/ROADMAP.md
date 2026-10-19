@@ -42,17 +42,38 @@ exclusions persistantes, planificateur, décisions.
       moteur de téléchargement (boucle non bornée
       découverte par les tests)
 
-## Étape 4 — finition & livraison
-- [ ] Exécution de la synchronisation globale
-      (orchestration scan → plan → téléchargements)
-- [ ] Tâches en arrière-plan (WorkManager)
-- [ ] Pont web ↔ Room (persistance native unifiée)
-- [ ] Permission POST_NOTIFICATIONS demandée au runtime
+## Étape 4 — finalisation, tests, compilation, livraison ✅
+- [x] Audit complet (TS, Kotlin, imports, permissions,
+      navigation, persistance, construction)
+- [x] Orchestration de synchronisation réelle
+      (plan → association → DownloadManager)
+- [x] WorkManager : analyse périodique de la
+      bibliothèque (contraintes réseau + batterie)
+- [x] Permission POST_NOTIFICATIONS au runtime
+      (Android 13+)
+- [x] Écran de diagnostic (états réels, export JSON)
+- [x] Logo A.MS + signature Arkanos (SVG vectoriel,
+      icône adaptive Android)
+- [x] Affichage progressif de la bibliothèque
+      (entrées de gamme)
+- [x] Correction bloque compile : `JSONArray` non
+      importé (parcours SAF) — l'APK ne compilait pas
+- [x] Correction : décollision de nom bornée
+      (moteur de téléchargement)
+- [x] Workflow CI `android-apk.yml` : APK debug
+      `A-MS-debug.apk` (artefact) + release signé
+      (secrets, manuel, non bloquant)
+- [x] Docs : INSTALLATION, BUILD_ANDROID, TESTS,
+      KNOWN_LIMITATIONS
 - [ ] Tests instrumentés Android (device réel)
-- [ ] Build release (signing, Play Store)
+- [ ] Pont web ↔ Room (alimentation de Room depuis
+      l'interface — localStorage opérationnel en
+      attendant, état « limité » au diagnostic)
 - [ ] Accessibilité complète, localisations supplémentaires
 
 > Distinction honnête : développé et testé unitairement
-> dans ce sandbox (165 tests) ; le build APK et les
-> tests sur appareil réel sont exécutés par CI et
-> Android Studio — non réalisés dans cet environnement.
+> dans ce sandbox (178 tests) ; la compilation Kotlin/Gradle
+> et le build APK sont exécutés par CI (GitHub Actions) —
+> non réalisés dans cet environnement (pas de SDK Android).
+> Tests sur appareil réel : à effectuer après installation
+> de l'APK (voir docs/INSTALLATION.md).

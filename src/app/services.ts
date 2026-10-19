@@ -1,7 +1,8 @@
 /**
  * Câblage central des services (singletons).
- * Chaque module est injecté ici ; l'étape 4 (finition)
- * ne remplacera que ce qui reste stubé.
+ * Chaque module est injecté ici ; l'étape 4 branche
+ * l'orchestration réelle (sync), WorkManager et la
+ * permission runtime de notification.
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -10,10 +11,10 @@ import { PersistedExclusionStore } from '../modules/exclusions/exclusions';
 import { NativeDownloadEngine } from '../modules/download/DownloadEngine';
 import { HistoryService } from '../modules/history/HistoryService';
 import { NativeNotificationService } from '../modules/notifications/NotificationService';
-import { BackgroundTaskSchedulerStub } from '../modules/background/BackgroundTaskScheduler';
+import { NativeBackgroundScheduler } from '../modules/background/BackgroundTaskScheduler';
 import { LocalLibraryScanner } from '../modules/scanner/scanner';
-import { SyncEngineStub } from '../modules/sync/SyncEngine';
 import { SyncPlanner } from '../modules/sync/planner';
+import { NativeSyncEngine } from '../modules/sync/NativeSyncEngine';
 import { DuplicateDetector } from '../modules/duplicates/duplicates';
 import { DuplicateMatcher } from '../modules/duplicates/matcher';
 import { ExclusionEngine } from '../modules/exclusions/exclusions';
@@ -32,6 +33,8 @@ import { PersistedFavoriteStore } from '../modules/favorites/favorites';
 import { PersistedUserPlaylistStore } from '../modules/userplaylist/userPlaylist';
 import { MemoryStorage, WebStorage } from './storage';
 import { loadSettings, saveSettings, type Settings } from './settings';
+import { loadLibraryState } from './libraryState';
+import { loadPlaylistAnalysis } from './playlistState';
 import AmsNative from '../plugins/amsNative';
 
 const storage =
@@ -66,14 +69,39 @@ const exclusionStore = new PersistedExclusionStore(storage);
 const decisionStore = new PersistedDecisionStore(storage);
 const watchlistStore = new PersistedWatchlistStore(storage);
 
+// --- Planification (étape 2) : règles réelles ---
+const planner = new SyncPlanner(
+  new DuplicateMatcher(),
+  exclusionStore,
+  (sourceId, trackRef) => decisionStore.resolutionFor(sourceId, trackRef),
+);
+
+// --- Association playlist ↔ fournisseurs autorisés ---
+const association = new PlaylistAssociation(
+  providerRegistry,
+  new DuplicateMatcher(),
+  exclusionStore,
+);
+
+const isNative = Capacitor.isNativePlatform();
+
 export const services = {
-  // Planificateur de synchronisation (étape 2).
-  syncEngine: new SyncEngineStub(),
-  planner: new SyncPlanner(
-    new DuplicateMatcher(),
-    exclusionStore,
-    (sourceId, trackRef) => decisionStore.resolutionFor(sourceId, trackRef),
-  ),
+  // Orchestration RÉELLE (étape 4) :
+  // plan → association → file de téléchargement native.
+  syncEngine: new NativeSyncEngine({
+    planner,
+    association,
+    downloadProviderFor: (id: string) =>
+      providerRegistry.getDownloadProvider(id),
+    enqueueDownload: (task, folderUri) =>
+      downloadEngine.enqueue(task, folderUri),
+    loadAnalysis: () => loadPlaylistAnalysis(storage),
+    loadLibrary: () => loadLibraryState(storage)?.tracks ?? [],
+    downloadFolderUri: () => settings().downloadFolderUri,
+    isNative,
+  }),
+
+  planner,
 
   // Analyse de playlist (YouTube Data API v3 officielle).
   playlistProvider: new YouTubePlaylistProvider(),
@@ -81,7 +109,7 @@ export const services = {
   // Scan local : moteur web réel + listeur natif.
   scanner: new LocalLibraryScanner(
     nativeFileLister,
-    Capacitor.isNativePlatform(),
+    isNative,
   ),
 
   // Fournisseurs : recherche fédérée + téléchargement autorisé.
@@ -89,12 +117,7 @@ export const services = {
   jamendo,
   youtubeSearch,
 
-  // Association playlist ↔ fournisseurs autorisés.
-  association: new PlaylistAssociation(
-    providerRegistry,
-    new DuplicateMatcher(),
-    exclusionStore,
-  ),
+  association,
 
   // Téléchargement réel (Android DownloadManager).
   downloadEngine,
@@ -110,17 +133,19 @@ export const services = {
 
   notifications: new NativeNotificationService(),
 
-  // Lecteur audio (MediaPlayer Android — fichiers locaux uniquement).
-  player: new NativePlayerService(
-    nativePlayerBridge,
-    Capacitor.isNativePlatform(),
+  // Arrière-plan réel : WorkManager (analyse périodique).
+  background: new NativeBackgroundScheduler(
+    isNative,
+    () => settings().libraryFolder,
   ),
+
+  // Lecteur audio (MediaPlayer Android — fichiers locaux uniquement).
+  player: new NativePlayerService(nativePlayerBridge, isNative),
 
   // Favoris et playlists utilisateur (persistés en local).
   favorites: new PersistedFavoriteStore(storage),
   userPlaylists: new PersistedUserPlaylistStore(storage),
 
-  background: new BackgroundTaskSchedulerStub(),
   duplicates: new DuplicateDetector(),
   matcher: new DuplicateMatcher(),
   exclusions: new ExclusionEngine(),

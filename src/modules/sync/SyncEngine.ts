@@ -1,5 +1,7 @@
 import type { SyncProgress, SyncReport } from '../../domain/models';
 
+export type { SyncProgress, SyncReport };
+
 /**
  * Moteur de synchronisation (bibliothèque locale ↔ catalogue distant).
  *
@@ -10,7 +12,10 @@ import type { SyncProgress, SyncReport } from '../../domain/models';
 
 export class SyncEngineError extends Error {
   constructor(
-    public readonly code: 'NOT_CONFIGURED' | 'NOT_IMPLEMENTED',
+    public readonly code:
+      | 'NOT_CONFIGURED'
+      | 'NOT_IMPLEMENTED'
+      | 'NOT_NATIVE',
     message: string,
   ) {
     super(message);

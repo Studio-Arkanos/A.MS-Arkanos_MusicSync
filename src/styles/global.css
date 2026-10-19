@@ -879,3 +879,82 @@ input {
 .playlist-create .input {
   flex: 1;
 }
+
+/* ===== Signature Arkanos (étape 4) ===== */
+
+.arkanos-signature {
+  letter-spacing: 0.35em;
+  color: var(--ams-gold);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.app-header {
+  box-shadow: 0 1px 0 var(--ams-gold);
+}
+
+.screen-title {
+  background: linear-gradient(90deg, var(--ams-text), var(--ams-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ===== Diagnostic ===== */
+
+.diagnostic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.diagnostic-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.diagnostic-component {
+  margin: 0;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-state-operational {
+  color: var(--ams-success);
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+.badge-state-limited {
+  color: var(--ams-warning);
+  border-color: rgba(210, 153, 34, 0.4);
+}
+
+.badge-state-unavailable,
+.badge-state-untested {
+  color: var(--ams-text-muted);
+}
+
+.badge-state-permission_required {
+  color: var(--ams-blue);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.badge-state-error {
+  color: var(--ams-danger);
+  border-color: rgba(229, 83, 75, 0.4);
+}
+
+.report-errors {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--ams-danger);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
