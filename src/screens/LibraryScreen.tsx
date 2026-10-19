@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 import type { FormEvent } from 'react';
 import AmsNative from '../plugins/amsNative';
 import { DEFAULT_LIBRARY_FOLDER } from '../config/app.config';
 import { EmptyState } from '../components/EmptyState';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { LibraryIcon } from '../components/icons';
+import { HeartIcon, LibraryIcon, PauseIcon, PlayIcon } from '../components/icons';
 import { fr } from '../i18n/fr';
 import { services } from '../app/services';
 import { loadLibraryState, saveLibraryState } from '../app/libraryState';
 import { loadSettings, saveSettings } from '../app/settings';
+import { playableFromLibrary } from '../modules/player/player';
+import { favoriteFromLocal } from '../modules/favorites/favorites';
 import type { LibraryState } from '../app/libraryState';
 
 /**
@@ -20,6 +22,9 @@ import type { LibraryState } from '../app/libraryState';
  * Les versions antérieures acceptent le chemin direct.
  * Les morceaux sont reconnus par leur nom de fichier :
  * aucune métadonnée n’est requise.
+ *
+ * Lecture : chaque morceau local est jouable (MediaPlayer
+ * natif) ; les favoris sont persistés localement.
  */
 export function LibraryScreen() {
   const [folder, setFolder] = useState<string>(() => {
@@ -31,6 +36,7 @@ export function LibraryScreen() {
   );
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [, bumpFavorites] = useReducer((n: number) => n + 1, 0);
 
   const onPickFolder = async () => {
     setError(null);
@@ -80,6 +86,23 @@ export function LibraryScreen() {
     setScanning(false);
   };
 
+  const favorites = services.favorites.list();
+  const playable = state ? playableFromLibrary(state.tracks) : [];
+
+  const playAll = () => {
+    void services.player.playQueue(playable);
+  };
+
+  const playTrack = (trackId: string) => {
+    const track = playable.find((candidate) => candidate.id === trackId);
+    if (track) void services.player.play(track);
+  };
+
+  const onToggleFavorite = (track: { id: string; title: string; artist: string }) => {
+    services.favorites.toggle(favoriteFromLocal(track));
+    bumpFavorites();
+  };
+
   return (
     <section className="screen">
       <ScreenHeader title={fr.nav.library} />
@@ -123,15 +146,81 @@ export function LibraryScreen() {
         </section>
       ) : null}
 
+      {/* Favoris de l'utilisateur (persistés en local) */}
+      {favorites.length > 0 ? (
+        <section className="card">
+          <h2 className="card__title">{fr.player.favorites}</h2>
+          <ul className="track-list">
+            {favorites.map((favorite) => (
+              <li className="track-row card" key={favorite.id}>
+                <div className="track-row__body">
+                  <p className="track-row__title">{favorite.title}</p>
+                  <p className="track-row__artist">
+                    {favorite.artist || fr.track.artist}
+                  </p>
+                  <p className="track-row__meta">
+                    <span className="badge badge-muted">{favorite.source}</span>
+                  </p>
+                  <div className="track-row__actions">
+                    {favorite.uri ? (
+                      <button
+                        className="btn-secondary"
+                        type="button"
+                        onClick={() =>
+                          void services.player.play({
+                            id: favorite.id,
+                            title: favorite.title,
+                            artist: favorite.artist,
+                            uri: favorite.uri!,
+                            source:
+                              favorite.source === 'downloaded' ? 'downloaded' : 'local',
+                          })
+                        }
+                      >
+                        {fr.player.play}
+                      </button>
+                    ) : null}
+                    <button
+                      className="btn-secondary"
+                      type="button"
+                      onClick={() => {
+                        services.favorites.remove(favorite.id);
+                        bumpFavorites();
+                      }}
+                    >
+                      {fr.player.removeFavorite}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {state && state.tracks.length > 0 ? (
-        <ul className="track-list">
-          {state.tracks.map((track) => (
-            <li className="card" key={track.id}>
-              <p className="card__body">{track.title}</p>
-              <p className="card__muted">{track.artist}</p>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="button-row">
+            <button className="btn-primary" type="button" onClick={playAll}>
+              {fr.player.playAll} ({state.tracks.length})
+            </button>
+          </div>
+          <ul className="track-list">
+            {state.tracks.map((track) => (
+              <LibraryTrackRow
+                key={track.id}
+                track={track}
+                playing={
+                  services.player.current?.id === track.id &&
+                  services.player.state === 'playing'
+                }
+                isFavorite={services.favorites.isFavorite(track.id)}
+                onPlay={() => playTrack(track.id)}
+                onToggleFavorite={() => onToggleFavorite(track)}
+              />
+            ))}
+          </ul>
+        </>
       ) : null}
 
       {!state ? (
@@ -144,5 +233,47 @@ export function LibraryScreen() {
 
       <p className="demo-notice">{fr.library.noMetadata}</p>
     </section>
+  );
+}
+
+function LibraryTrackRow({
+  track,
+  playing,
+  isFavorite,
+  onPlay,
+  onToggleFavorite,
+}: {
+  track: { id: string; title: string; artist: string };
+  playing: boolean;
+  isFavorite: boolean;
+  onPlay: () => void;
+  onToggleFavorite: () => void;
+}) {
+  return (
+    <li className="track-row card">
+      <button
+        className="track-row__play"
+        type="button"
+        onClick={onPlay}
+        aria-label={`${fr.player.play} ${track.title}`}
+      >
+        {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
+      </button>
+      <div className="track-row__body">
+        <p className="track-row__title">{track.title}</p>
+        <p className="track-row__artist">{track.artist}</p>
+      </div>
+      <button
+        className={`track-row__heart${isFavorite ? ' track-row__heart--active' : ''}`}
+        type="button"
+        onClick={onToggleFavorite}
+        aria-pressed={isFavorite}
+        aria-label={
+          isFavorite ? fr.player.removeFavorite : fr.player.addFavorite
+        }
+      >
+        <HeartIcon size={20} />
+      </button>
+    </li>
   );
 }

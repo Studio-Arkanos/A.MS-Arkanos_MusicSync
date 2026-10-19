@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DEFAULT_PLAYLIST,
@@ -21,6 +21,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { PlaylistIcon, SearchIcon } from '../components/icons';
 import { fr } from '../i18n/fr';
+import { resolvePlayableTracks } from '../modules/player/player';
 import type { Filter, FilterKey } from '../components/playlistFilters';
 
 /**
@@ -52,6 +53,35 @@ export function PlaylistScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+
+  // Playlists de l'utilisateur (persistées en local).
+  const [playlistName, setPlaylistName] = useState('');
+  const [, bumpPlaylists] = useReducer((n: number) => n + 1, 0);
+  const userPlaylists = services.userPlaylists.list();
+
+  const onCreatePlaylist = () => {
+    const name = playlistName.trim();
+    if (!name) return;
+    services.userPlaylists.create(name);
+    setPlaylistName('');
+    setNotice(fr.player.playlistCreated);
+    bumpPlaylists();
+  };
+
+  const onPlayUserPlaylist = (id: string) => {
+    const playlist = services.userPlaylists.get(id);
+    if (!playlist) return;
+    const tracks = resolvePlayableTracks(
+      playlist.trackIds,
+      loadLibraryState(services.storage)?.tracks ?? [],
+      services.downloadEngine.list(),
+    );
+    if (tracks.length === 0) {
+      setNotice(fr.player.queueEmpty);
+      return;
+    }
+    void services.player.playQueue(tracks);
+  };
 
   const sourceId = analysis?.playlistId ?? config.sourceId;
 
@@ -217,6 +247,84 @@ export function PlaylistScreen() {
   return (
     <section className="screen">
       <ScreenHeader title={fr.nav.playlist} subtitle={fr.playlist.content} />
+
+      {/* Playlists de l'utilisateur */}
+      <section className="card">
+        <h2 className="card__title">{fr.player.myPlaylists}</h2>
+        <div className="playlist-create">
+          <input
+            className="input"
+            value={playlistName}
+            onChange={(event) => setPlaylistName(event.target.value)}
+            placeholder={fr.player.playlistName}
+            aria-label={fr.player.playlistName}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') onCreatePlaylist();
+            }}
+          />
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={onCreatePlaylist}
+            disabled={!playlistName.trim()}
+          >
+            {fr.player.create}
+          </button>
+        </div>
+        {userPlaylists.length > 0 ? (
+          <ul className="track-list">
+            {userPlaylists.map((playlist) => (
+              <li className="track-row card" key={playlist.id}>
+                <div className="track-row__body">
+                  <p className="track-row__title">{playlist.name}</p>
+                  <p className="track-row__artist">
+                    {fr.player.tracksCount.replace('{n}', String(playlist.trackIds.length))}
+                  </p>
+                  <div className="track-row__actions">
+                    <button
+                      className="btn-secondary"
+                      type="button"
+                      onClick={() => onPlayUserPlaylist(playlist.id)}
+                      disabled={playlist.trackIds.length === 0}
+                    >
+                      {fr.player.play}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      type="button"
+                      onClick={() => {
+                        const next = window.prompt(fr.player.rename, playlist.name);
+                        if (next && next.trim()) {
+                          services.userPlaylists.rename(playlist.id, next);
+                          setNotice(fr.player.playlistRenamed);
+                          bumpPlaylists();
+                        }
+                      }}
+                    >
+                      {fr.player.rename}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(fr.common.confirmDelete)) {
+                          services.userPlaylists.remove(playlist.id);
+                          setNotice(fr.player.playlistDeleted);
+                          bumpPlaylists();
+                        }
+                      }}
+                    >
+                      {fr.player.delete}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="card__muted">{fr.player.emptyPlaylists}</p>
+        )}
+      </section>
 
       <section className="card">
         <h2 className="card__title">{fr.playlist.name}</h2>

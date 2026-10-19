@@ -26,6 +26,10 @@ import { ConversionManagerStub } from '../modules/conversion/conversion';
 import { UrlImportService } from '../modules/import/urlImport';
 import { PersistedWatchlistStore } from '../modules/watchlist/watchlist';
 import { InMemoryHistoryRepository, InMemoryTrackRepository } from '../modules/database/InMemoryRepositories';
+import { NativePlayerService } from '../modules/player/player';
+import { nativePlayerBridge } from '../modules/player/bridge';
+import { PersistedFavoriteStore } from '../modules/favorites/favorites';
+import { PersistedUserPlaylistStore } from '../modules/userplaylist/userPlaylist';
 import { MemoryStorage, WebStorage } from './storage';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import AmsNative from '../plugins/amsNative';
@@ -105,6 +109,17 @@ export const services = {
   watchlist: watchlistStore,
 
   notifications: new NativeNotificationService(),
+
+  // Lecteur audio (MediaPlayer Android — fichiers locaux uniquement).
+  player: new NativePlayerService(
+    nativePlayerBridge,
+    Capacitor.isNativePlatform(),
+  ),
+
+  // Favoris et playlists utilisateur (persistés en local).
+  favorites: new PersistedFavoriteStore(storage),
+  userPlaylists: new PersistedUserPlaylistStore(storage),
+
   background: new BackgroundTaskSchedulerStub(),
   duplicates: new DuplicateDetector(),
   matcher: new DuplicateMatcher(),

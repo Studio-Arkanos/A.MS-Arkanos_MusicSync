@@ -37,8 +37,9 @@ android/
 │       ├── AndroidManifest.xml
 │       ├── assets/public/        # bundle web injecté par `cap sync`
 │       ├── java/com/arkanos/ams/
-│       │   ├── MainActivity.kt        # BridgeActivity + enregistrement plugin
+│       │   ├── MainActivity.kt        # BridgeActivity + enregistrement plugins
 │       │   ├── plugins/AmsNativePlugin.kt
+│       │   ├── plugins/AmsPlayerPlugin.kt   # MediaPlayer (fichiers locaux)
 │       │   └── data/
 │       │       ├── AppDatabase.kt     # Room
 │       │       ├── TrackDao.kt
@@ -60,8 +61,10 @@ android/
 
 ## Ajouter une méthode au plugin natif
 
-1. Kotlin : `@PluginMethod` dans `AmsNativePlugin.kt`.
-2. TypeScript : signature dans `src/plugins/amsNative.ts`.
+1. Kotlin : `@PluginMethod` dans `AmsNativePlugin.kt`
+   (ou `AmsPlayerPlugin.kt` pour la lecture).
+2. TypeScript : signature dans `src/plugins/amsNative.ts`
+   (ou `src/plugins/amsPlayer.ts`).
 3. Gérer l'indisponibilité côté web (rejet propre).
 
 ## Tests
@@ -69,7 +72,7 @@ android/
 ```bash
 npm test
 ```
-Couverture (85 tests, étape 2) :
+Couverture (165 tests, étape 3+) :
 - normalisation : exemples du cahier (4 variantes
   « Gims - Spider » → « gims spider »), qualité,
   promotionnels, marqueurs de version conservés ;
@@ -86,7 +89,12 @@ Couverture (85 tests, étape 2) :
 - planificateur : les règles de bibliothèque,
   prime des exclusions, décisions lève-ambiguïté ;
 - téléchargement : jamais d'écrasement d'un fichier
-  préexistant.
+  préexistant, décollision de nom bornée ;
+- lecteur : file d'attente, bouclage suivant/précédent,
+  pause/reprise, avance rapide, fin automatique,
+  erreurs honnêtes ;
+- favoris et playlists utilisateur : CRUD, persistance
+  (redémarrage), stockage corrompu ignoré.
 
 ## CI (GitHub Actions)
 

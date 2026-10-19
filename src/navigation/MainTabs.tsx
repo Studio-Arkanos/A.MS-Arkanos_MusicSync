@@ -12,6 +12,7 @@ import {
 } from '../components/icons';
 import { fr } from '../i18n/fr';
 import AmsNative from '../plugins/amsNative';
+import { MiniPlayer } from '../components/MiniPlayer';
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/icons';
 
@@ -61,6 +62,8 @@ export function MainTabs() {
       <main className="app-main">
         <Outlet />
       </main>
+
+      <MiniPlayer />
 
       <nav className="bottom-nav" aria-label="Navigation principale">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (

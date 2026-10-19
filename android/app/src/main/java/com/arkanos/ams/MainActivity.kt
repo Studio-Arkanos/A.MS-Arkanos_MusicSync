@@ -5,10 +5,12 @@ import android.content.Intent
 import android.os.Bundle
 import com.getcapacitor.BridgeActivity
 import com.arkanos.ams.plugins.AmsNativePlugin
+import com.arkanos.ams.plugins.AmsPlayerPlugin
 
 /**
  * Point d'entrée natif d'A.MS.
- * - enregistre le plugin Capacitor personnalisé AmsNative ;
+ * - enregistre les plugins Capacitor personnalisés
+ *   (AmsNative : médias/téléchargements, AmsPlayer : lecture) ;
  * - capture la route en attente (clic sur une notification)
  *   pour que l'interface ouvre l'écran du morceau concerné.
  */
@@ -17,6 +19,7 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerPlugin(AmsNativePlugin::class.java)
+        registerPlugin(AmsPlayerPlugin::class.java)
         capturePendingRoute(intent)
     }
 

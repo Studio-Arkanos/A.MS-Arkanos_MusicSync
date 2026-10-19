@@ -28,6 +28,20 @@ exclusions persistantes, planificateur, décisions.
       (FFmpegKit évalué : licence incompatible,
       build non vérifiable ici). Interface prête.
 
+## Étape 3+ — lecteur, favoris, playlists ✅
+- [x] Lecteur natif (MediaPlayer) : file d'attente,
+      lecture/pause/arrêt, avance rapide, suivant/
+      précédent, fin automatique — fichiers locaux
+      (bibliothèque + téléchargements) UNIQUEMENT
+- [x] Mini-lecteur + écran lecteur (/player)
+- [x] Favoris persistés (identité stable source:ref
+      ou URI locale)
+- [x] Playlists utilisateur persistées (créer,
+      renommer, supprimer, ajouter/retirer)
+- [x] Correction : décollision de nom bornée dans le
+      moteur de téléchargement (boucle non bornée
+      découverte par les tests)
+
 ## Étape 4 — finition & livraison
 - [ ] Exécution de la synchronisation globale
       (orchestration scan → plan → téléchargements)
@@ -39,6 +53,6 @@ exclusions persistantes, planificateur, décisions.
 - [ ] Accessibilité complète, localisations supplémentaires
 
 > Distinction honnête : développé et testé unitairement
-> dans ce sandbox (121 tests) ; le build APK et les
+> dans ce sandbox (165 tests) ; le build APK et les
 > tests sur appareil réel sont exécutés par CI et
 > Android Studio — non réalisés dans cet environnement.

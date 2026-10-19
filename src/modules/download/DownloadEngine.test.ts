@@ -59,12 +59,32 @@ describe('NativeDownloadEngine', () => {
   it('préserve les fichiers existants : nom suffixé, jamais d’écrasement', async () => {
     const bridge: DownloadBridge = {
       ...BRIDGE_OK,
-      fileExists: vi.fn().mockResolvedValue({ exists: true }),
+      // Premier nom occupé, second libre — scénario réel.
+      fileExists: vi
+        .fn()
+        .mockResolvedValueOnce({ exists: true })
+        .mockResolvedValue({ exists: false }),
     };
     const engine = newEngine(bridge);
     try {
       const task = await engine.enqueue(BASE_TASK, 'content://folder');
       expect(task.displayName).toBe('Gims - Spider (2).mp3');
+    } finally {
+      engine.dispose();
+    }
+  });
+
+  it('pont défectueux (toujours existant) : fallback borné, aucune boucle infinie', async () => {
+    const bridge: DownloadBridge = {
+      ...BRIDGE_OK,
+      fileExists: vi.fn().mockResolvedValue({ exists: true }),
+    };
+    const engine = newEngine(bridge);
+    try {
+      const task = await engine.enqueue(BASE_TASK, 'content://folder');
+      // Nom distinct du fichier cible — jamais d'écrasement.
+      expect(task.displayName).not.toBe(BASE_TASK.displayName);
+      expect(task.displayName.startsWith(BASE_TASK.displayName)).toBe(true);
     } finally {
       engine.dispose();
     }

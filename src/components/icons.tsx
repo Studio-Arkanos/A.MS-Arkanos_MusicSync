@@ -95,3 +95,45 @@ export function MusicIcon({ size = 22, ...rest }: IconProps) {
     </svg>
   );
 }
+
+export function PlayIcon({ size = 22, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function PauseIcon({ size = 22, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function SkipNextIcon({ size = 22, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M6 4.5v15l10-7.5z" fill="currentColor" stroke="none" />
+      <path d="M18 5v14" />
+    </svg>
+  );
+}
+
+export function SkipPreviousIcon({ size = 22, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M18 4.5v15L8 12z" fill="currentColor" stroke="none" />
+      <path d="M6 5v14" />
+    </svg>
+  );
+}
+
+export function HeartIcon({ size = 22, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M12 20s-7.5-4.7-9.3-9C1.4 7.7 3.6 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.6 3.2 4.3 6.5-1.8 4.3-9.3 9-9.3 9z" />
+    </svg>
+  );
+}

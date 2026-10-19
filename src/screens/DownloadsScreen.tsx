@@ -91,9 +91,28 @@ export function DownloadsScreen() {
                 />
               ) : null}
               {task.status === 'done' && task.localUri ? (
-                <p className="card__muted">
-                  {fr.downloads.fileSaved} : {task.localUri}
-                </p>
+                <>
+                  <p className="card__muted">
+                    {fr.downloads.fileSaved} : {task.localUri}
+                  </p>
+                  <div className="track-row__actions">
+                    <button
+                      className="btn-secondary"
+                      type="button"
+                      onClick={() =>
+                        void services.player.play({
+                          id: task.localUri!,
+                          title: task.title,
+                          artist: task.artist,
+                          uri: task.localUri!,
+                          source: 'downloaded',
+                        })
+                      }
+                    >
+                      {fr.player.play}
+                    </button>
+                  </div>
+                </>
               ) : null}
               {task.status === 'queued' || task.status === 'downloading' ? (
                 <div className="track-row__actions">

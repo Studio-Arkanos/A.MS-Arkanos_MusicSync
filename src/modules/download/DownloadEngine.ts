@@ -71,6 +71,9 @@ type Listener = () => void;
 
 const STORAGE_KEY = 'ams.downloads.v1';
 
+/** Tentatives maximales de décollision de nom de fichier. */
+const MAX_NAME_COLLISIONS = 100;
+
 function nextTaskId(): string {
   return `dl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -178,23 +181,28 @@ export class NativeDownloadEngine {
     this.storage.set(STORAGE_KEY, JSON.stringify(this.tasks));
   }
 
-  /** Vérifie la cible et évite tout écrasement. */
+  /**
+   * Vérifie la cible et évite tout écrasement.
+   * Bornée : un pont défectueux (toujours « existant »)
+   * ne peut pas produire de boucle infinie — après
+   * MAX_NAME_COLLISIONS essais, un suffixe temporel
+   * garantit l'unicité.
+   */
   private async uniqueDisplayName(
     folderUri: string | undefined,
     displayName: string,
   ): Promise<string> {
     if (!folderUri) return displayName;
     let candidate = displayName;
-    let index = 1;
-    while (true) {
+    for (let index = 1; index <= MAX_NAME_COLLISIONS; index++) {
       const { exists } = await this.bridge.fileExists({
         folderUri,
         name: candidate,
       });
       if (!exists) return candidate;
-      index++;
-      candidate = suffixedName(displayName, index);
+      candidate = suffixedName(displayName, index + 1);
     }
+    return `${displayName}.${Date.now()}`;
   }
 
   async enqueue(

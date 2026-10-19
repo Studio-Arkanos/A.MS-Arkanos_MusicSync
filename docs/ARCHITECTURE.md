@@ -172,6 +172,22 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
 - `isNativeAvailable`, `getDeviceInfo` (réels dès l'étape 1) ;
   `notify`, `scanLibrary`, `schedulePeriodicSync` (stubs honnêtes).
 
+### Lecteur (`src/modules/player/` + `AmsPlayerPlugin.kt`) — **opérationnel**
+- MediaPlayer Android : play/pause/stop/seekTo/getStatus ;
+- sources jouables : bibliothèque scannée (content:// SAF)
+  et téléchargements terminés (URI locale) — jamais de
+  flux distant, jamais d'extraction YouTube ;
+- file d'attente, morceau suivant/précédent, fin
+  automatique, état réel du lecteur (polling 500 ms).
+
+### Favoris et playlists utilisateur (`src/modules/favorites/`, `src/modules/userplaylist/`)
+- Persistés en local (localStorage de la WebView) ;
+- favori : identité stable `source:ref` (distant) ou
+  URI locale (jouable) ;
+- playlist : liste d'identifiants jouables résolus
+  au moment de la lecture (non résolu = ignoré,
+  jamais remplacé par une fausse source).
+
 ## Flux de données (étape 2, en place)
 
 ```
