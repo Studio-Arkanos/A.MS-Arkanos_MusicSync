@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main, 'arena/**']
@@ -62,15 +65,15 @@ jobs:
       - name: Construire l'APK de débogage
         run: |
           cd android
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle_build.log || true
+          ./gradlew :app:assembleDebug --no-daemon 2>&1 | tee ../gradle_output.txt || true
           cd ..
-          git config user.name "CI Debug"
-          git config user.email "ci@arkanos.ams"
+          find . -name "*.apk" > apks_found.txt || true
+          find android/ -type f | grep -E "apk|outputs|build" | head -n 100 > build_files.txt || true
+          git config user.name "CI Bot"
+          git config user.email "bot@ci.com"
           git checkout -B debug-log
-          tail -n 120 /tmp/gradle_build.log > /tmp/gradle_tail.log
-          find android/ -name "*.apk" > /tmp/found_apks.txt || true
-          git add -f /tmp/gradle_tail.log /tmp/found_apks.txt
-          git commit -m "ci: debug gradle log" || true
+          git add gradle_output.txt apks_found.txt build_files.txt
+          git commit -m "ci: inspect gradle output" || true
           git push origin debug-log -f || true
 
       - name: Publier l'APK
