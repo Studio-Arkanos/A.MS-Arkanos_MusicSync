@@ -28,6 +28,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
 import com.arkanos.ams.MainActivity
 import java.net.HttpURLConnection
 import java.net.URL
@@ -58,15 +59,23 @@ import java.util.concurrent.TimeUnit
  *    (WorkManager n'autorise pas moins de 15 min, et
  *    aucune heure exacte n'est garantie par Android).
  */
-@CapacitorPlugin(name = "AmsNative")
+@CapacitorPlugin(
+    name = "AmsNative",
+    permissions = [
+        Permission(
+            alias = AmsNativePlugin.NOTIFICATIONS_ALIAS,
+            strings = [android.Manifest.permission.POST_NOTIFICATIONS],
+        ),
+    ],
+)
 class AmsNativePlugin : Plugin() {
 
     companion object {
         const val CHANNEL_DECISIONS = "ams_decisions"
         private const val CHANNEL_BACKGROUND = "ams_background"
         private const val REQUEST_PICK_FOLDER = 41001
-        private const val REQUEST_NOTIFICATIONS = 41002
-        private const val PREFS = "ams_prefs"
+        internal const val NOTIFICATIONS_ALIAS = "notifications"
+        internal const val PREFS = "ams_prefs"
         const val KEY_PENDING_ROUTE = "pendingRoute"
         const val KEY_PENDING_TRACK_REF = "pendingTrackRef"
         private const val KEY_LAST_FOLDER = "lastFolder"
@@ -195,10 +204,10 @@ class AmsNativePlugin : Plugin() {
             call.resolve(JSObject().apply { put("granted", true) })
             return
         }
-        requestPermissions(
+        requestPermissionForAlias(
+            NOTIFICATIONS_ALIAS,
             call,
-            REQUEST_NOTIFICATIONS,
-            android.Manifest.permission.POST_NOTIFICATIONS,
+            "onNotificationPermissionResult",
         )
     }
 
