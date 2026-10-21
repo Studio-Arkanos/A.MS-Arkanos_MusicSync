@@ -59,6 +59,17 @@ jobs:
             exit 1
           }
 
+      - name: Debug inspect build outputs
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BUILD_FILES=$(find android/app/build -maxdepth 6 -type f 2>/dev/null | head -n 50 || echo "aucun fichier")
+          gh pr comment 2 --body "### Fichiers build :
+          \`\`\`
+          $BUILD_FILES
+          \`\`\`" || true
+
       - name: Vérifier et nommer l'APK
         run: |
           APK_FOUND=$(find android -name "*.apk" -type f | grep -i "debug" | head -n 1)
