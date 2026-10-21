@@ -50,7 +50,7 @@ export function MainTabs() {
     <div className="app-shell">
       <header className="app-header">
         <span className="app-header__logo">
-          <Logo size={22} />
+          <Logo size={28} variant="symbol" alt="A.MS — Arkanos Music Sync" />
         </span>
         <div className="app-header__titles">
           <span className="app-header__name">{fr.app.name}</span>

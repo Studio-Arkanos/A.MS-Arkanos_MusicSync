@@ -9,6 +9,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatCard } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { Logo } from '../components/Logo';
 import type { OperationRecord } from '../domain/models';
 
 /**
@@ -79,6 +80,25 @@ export function HomeScreen() {
 
   return (
     <section className="screen">
+      {/* Carte identité officielle A.MS */}
+      <div className="ams-hero">
+        <div className="ams-hero__ambient" aria-hidden="true" />
+        <div className="ams-hero__logo">
+          <Logo size={74} variant="badge" alt="Logo officiel A.MS — Arkanos Music Sync" />
+        </div>
+        <div className="ams-hero__content">
+          <h2 className="ams-hero__title">ARKANOS MUSIC SYNC</h2>
+          <p className="ams-hero__subtitle">
+            Synchronisation intelligente, autonome et locale pour audiophiles.
+          </p>
+          <div className="ams-hero__badges">
+            <span className="ams-hero__chip ams-hero__chip--gold">A.MS v0.1.0</span>
+            <span className="ams-hero__chip ams-hero__chip--cyan">Stockage SAF</span>
+            <span className="ams-hero__chip">Base Room locale</span>
+          </div>
+        </div>
+      </div>
+
       <h1 className="screen-title">{fr.home.title}</h1>
 
       <div className="banner banner-info">
