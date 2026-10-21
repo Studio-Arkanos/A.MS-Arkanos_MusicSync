@@ -49,43 +49,17 @@ jobs:
         run: npx cap sync android
 
       - name: Construire l'APK de débogage
-        run: |
-          cd android
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle_build.log || {
-            echo "### Erreur de compilation Gradle" >> "$GITHUB_STEP_SUMMARY"
-            echo '```text' >> "$GITHUB_STEP_SUMMARY"
-            tail -n 80 /tmp/gradle_build.log >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          }
-
-      - name: Debug inspect build outputs
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BUILD_FILES=$(find android/app/build -maxdepth 6 -type f 2>/dev/null | head -n 50 || echo "aucun fichier")
-          gh pr comment 2 --body "### Fichiers build :
-          \`\`\`
-          $BUILD_FILES
-          \`\`\`" || true
+        run: cd android && ./gradlew assembleDebug --no-daemon
 
       - name: Vérifier et nommer l'APK
         run: |
-          APK_FOUND=$(find android -name "*.apk" -type f | grep -i "debug" | head -n 1)
-          if [ -z "$APK_FOUND" ]; then
-            APK_FOUND=$(find android -name "*.apk" -type f | head -n 1)
-          fi
-          if [ -z "$APK_FOUND" ] || [ ! -s "$APK_FOUND" ]; then
-            echo "::error::Aucun fichier .apk valide trouvé dans android/"
-            echo "### Fichiers produits dans android/app/build :" >> "$GITHUB_STEP_SUMMARY"
-            echo '```text' >> "$GITHUB_STEP_SUMMARY"
-            find android/app/build -maxdepth 5 -ls >> "$GITHUB_STEP_SUMMARY" || true
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          APK_PATH=android/app/build/outputs/apk/debug/app-debug.apk
+          if [ ! -s "$APK_PATH" ]; then
+            echo "::error::L'APK n'a pas été produit à $APK_PATH"
+            find android/app/build -maxdepth 5 -ls || true
             exit 1
           fi
-          echo "APK localisé avec succès : $APK_FOUND"
-          cp "$APK_FOUND" A-MS-debug.apk
+          cp "$APK_PATH" A-MS-debug.apk
 
       - name: Publier l'APK de débogage
         uses: actions/upload-artifact@v4

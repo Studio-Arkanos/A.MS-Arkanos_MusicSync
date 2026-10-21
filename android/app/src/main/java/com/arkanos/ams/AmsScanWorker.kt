@@ -41,7 +41,7 @@ class AmsScanWorker(
         private const val KEY_SCAN_FOLDER = "scanFolder"
         private const val CHANNEL_BACKGROUND = "ams_background"
         private const val NOTIFICATION_ID = 41002
-        private const val AUDIO_EXTENSIONS =
+        private val AUDIO_EXTENSIONS =
             listOf(".mp3", ".m4a", ".aac", ".flac", ".ogg", ".wav")
     }
 
