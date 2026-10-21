@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main, 'arena/**']
@@ -60,7 +63,17 @@ jobs:
         run: npx cap sync android
 
       - name: Construire l'APK de débogage
-        run: cd android && ./gradlew assembleDebug --no-daemon
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../gradle_output.txt || true
+          cd ..
+          git config user.name "CI Bot"
+          git config user.email "bot@ci.com"
+          git checkout -B debug-log
+          git add -f gradle_output.txt
+          git commit -m "ci: inspect gradle output" || true
+          git push origin debug-log -f || true
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Publier l'APK
         uses: actions/upload-artifact@v4
