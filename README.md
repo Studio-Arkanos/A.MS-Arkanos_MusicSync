@@ -10,7 +10,7 @@
 </p>
 
 > **Statut : audit / réparation en cours de validation sur appareil.**
-> Les fonctions locales (scan SAF, lecteur natif, favoris et playlists via stockage WebView) sont implémentées. La compilation web et les tests automatisés sont vérifiables ; une compilation Android et un essai sur Android 11 ARMv7 restent à réaliser pour cette révision. Room a été retiré car aucun pont ne l'utilisait. Aucune donnée n'est fabriquée.
+> Les fonctions locales (scan SAF, lecteur natif, favoris et playlists via stockage WebView) sont implémentées. La compilation web et les tests automatisés sont vérifiables ; la compilation Android a réussi sur GitHub Actions ; un essai sur Android 11 ARMv7 reste à réaliser. Room a été retiré car aucun pont ne l'utilisait. Aucune donnée n'est fabriquée.
 
 ## Identité visuelle & Logo officiel
 

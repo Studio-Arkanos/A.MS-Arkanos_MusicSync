@@ -1,6 +1,6 @@
 # Rapport d’audit et de réparation — A.MS Arkanos Music Sync
 
-**État du rapport :** audit du dépôt et corrections de code effectués sur la branche Arena active. Validation Gradle locale non réalisable dans l’environnement de travail (JDK absent). Aucun test sur téléphone physique n’a été fait. Ce document distingue les faits confirmés des points qui restent à vérifier sur appareil.
+**État du rapport :** audit du dépôt et corrections de code effectués sur la branche Arena active. Validation Gradle locale non réalisable dans l’environnement de travail (JDK absent), mais le workflow GitHub Actions a compilé et publié un APK debug pour ce commit. Aucun test sur téléphone physique n’a été fait. Ce document distingue les faits confirmés des points qui restent à vérifier sur appareil.
 
 ## Résumé accessible
 
@@ -24,7 +24,7 @@ Le chemin `/storage/emulated/0/Music/Musics` par défaut n’est pas une permiss
 
 ### « AMS native plugin is not implemented on Android »
 
-**Cause confirmée dans le cycle de vie :** l’enregistrement personnalisé se faisait après l’appel à `BridgeActivity.onCreate()`. Capacitor crée le Bridge durant `super.onCreate`, avant l’ancien `registerPlugin`; l’instance active ne pouvait donc pas trouver les plugins à l’appel JS. `MainActivity.kt` enregistre désormais `AmsNativePlugin` et `AmsPlayerPlugin` avant `super.onCreate`. `capacitor.config.ts` déclare aussi les deux noms sous `plugins` pour rendre la configuration explicite. La validation par compilation passe par CI / Gradle dès qu’un runner Android est disponible ; l’environnement courant n’a pas de JDK, donc aucune assertion de build local n’est faite.
+**Cause confirmée dans le cycle de vie :** l’enregistrement personnalisé se faisait après l’appel à `BridgeActivity.onCreate()`. Capacitor crée le Bridge durant `super.onCreate`, avant l’ancien `registerPlugin`; l’instance active ne pouvait donc pas trouver les plugins à l’appel JS. `MainActivity.kt` enregistre désormais `AmsNativePlugin` et `AmsPlayerPlugin` avant `super.onCreate`. `capacitor.config.ts` déclare aussi les deux noms sous `plugins` pour rendre la configuration explicite. La compilation Gradle est confirmée par le workflow CI `Android APK` du commit `73e9a9d` (run `39690310506`) ; l’environnement de développement n’a pas de JDK, donc la commande locale a échoué immédiatement avec `java: command not found`. La CI a produit et publié `A-MS-debug.apk`.
 
 ### « scan_error: dossier inaccessible »
 
@@ -105,9 +105,11 @@ Aucun service distant n’est obligatoire pour consulter la musique locale hors 
 | `npm run lint` | Réussi |
 | `npm run typecheck` | Réussi |
 | `npm test` | Réussi après correction du test M3U : 25 fichiers, 187 tests |
-| `npm run build` | Réussi ; Vite 7.3.7, JS 388.14 kB / gzip 118.88 kB |
+| `npm run build` | Réussi ; Vite 7.3.7, JS 388.69 kB / gzip 119.05 kB |
 | `npx cap sync android` | Réussi ; assets copiés et configuration native synchronisée |
-| `cd android && ./gradlew assembleDebug --no-daemon` | **Non exécuté** : `java: command not found`, `JAVA_HOME` absent. Aucun nouvel APK n’est livré par ce tour. |
+| `cd android && ./gradlew assembleDebug --no-daemon` local | **Non réalisable** : `java: command not found`, `JAVA_HOME` absent. |
+| Android APK workflow (GitHub Actions) | ✅ `assembleDebug`, vérification de l’APK et publication : run `39690310506` ([ouvrir le run](https://github.com/Studio-Arkanos/A.MS-Arkanos_MusicSync/actions/runs/39690310506)), artifact `A-MS-debug`, 9,714,943 octets (archive), expire le 2027-01-19. |
+| Inspection ABI / appareil | Artifact ZIP non téléchargeable depuis ce sandbox (endpoint de stockage hors réseau autorisé) ; ABI de l’APK non inspectées. Aucun téléphone Android 11 ARMv7 testé. |
 | Appareil physique Android 11 / ARMv7 | Non testé |
 
 Les tests Vitest valident les modules web et les cas injectés ; ils ne simulent pas la présence de musique dans le téléphone et ne prouvent pas le fonctionnement des plugins natifs.
