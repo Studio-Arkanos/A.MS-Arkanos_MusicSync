@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - uses: actions/setup-node@v4
         with:
@@ -51,7 +51,7 @@ jobs:
       - name: Construire l'APK de débogage
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle_build.log || {
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle_build.log || {
             echo "### Erreur de compilation Gradle" >> "$GITHUB_STEP_SUMMARY"
             echo '```text' >> "$GITHUB_STEP_SUMMARY"
             tail -n 80 /tmp/gradle_build.log >> "$GITHUB_STEP_SUMMARY"
@@ -67,7 +67,10 @@ jobs:
           fi
           if [ -z "$APK_FOUND" ] || [ ! -s "$APK_FOUND" ]; then
             echo "::error::Aucun fichier .apk valide trouvé dans android/"
-            find android/app/build/outputs -maxdepth 4 -ls || true
+            echo "### Fichiers produits dans android/app/build :" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            find android/app/build -maxdepth 5 -ls >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           echo "APK localisé avec succès : $APK_FOUND"
@@ -92,7 +95,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - uses: actions/setup-node@v4
         with:
