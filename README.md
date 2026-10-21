@@ -1,8 +1,13 @@
+<p align="center">
+  <img src="public/branding/ams-badge.png" alt="Logo officiel A.MS — Arkanos Music Sync" width="160" height="160" />
+</p>
+
 # A.MS — Arkanos Music Sync
 
-Application Android de gestion, synchronisation, recherche
-et téléchargement musical. Organisation : **Studio-Arkanos** ·
-Identifiant Android : `com.arkanos.ams` · Langue : français.
+<p align="center">
+  <strong>Synchronisation musicale intelligente, autonome &amp; locale pour audiophiles</strong><br />
+  Organisation : <strong>Studio-Arkanos</strong> · Identifiant Android : <code>com.arkanos.ams</code> · Langue : français.
+</p>
 
 > **Statut : étape 4/4 — finalisation et livraison.**
 > Application Android complète : orchestration de
@@ -14,6 +19,23 @@ Identifiant Android : `com.arkanos.ams` · Langue : français.
 > La conversion audio n'est PAS intégrée
 > (aucune solution vérifiée — documenté).
 > Aucune donnée n'est jamais simulée.
+
+## Identité visuelle & Logo officiel
+
+Le logo officiel d'**A.MS** réunit les dimensions fondamentales du projet :
+- **L'arche orbitale cyan électrique** : symbolise la synchronisation dynamique continue et l'échange de métadonnées.
+- **Le « A » d'or angulaire** : signature emblématique de l'écosystème *Studio-Arkanos*.
+- **L'égaliseur audio central** : ondes sonores verticales dorées incarnant le cœur musical et l'analyse de bibliothèque.
+- **Le badge squircle nuit & lueur bleue** : intégration moderne et lisibilité maximale sur thème sombre.
+
+### Ressources graphiques (`public/branding/`)
+
+- `public/branding/ams-logo.png` : image source officielle complète (1254 × 1254 px, badge + typographie A.MS).
+- `public/branding/ams-badge.png` : badge squircle détouré pour l'interface web, les bannières et la documentation.
+- `public/branding/ams-symbol.png` : symbole épuré haute résolution (A + halo + ondes, fond transparent) pour les icônes applicatives.
+- `public/branding/ams-symbol-{64,128,192,512}.png` & `favicon.png` : déclinaisons pré-dimensionnées nettes à toute résolution.
+- **Icônes Android** : adaptive icon (`mipmap-*/ic_launcher_foreground.png` centré dans la zone sûre de 66 dp sur fond `#0B1220`) et icônes legacy rondes et squircles (`ic_launcher.png`, `ic_launcher_round.png`).
+- **Écrans de démarrage (Splash)** : fonds natifs Android (`drawable-*/splash.png`) aux couleurs officielles Arkanos.
 
 ## Fonctionnalités par module
 

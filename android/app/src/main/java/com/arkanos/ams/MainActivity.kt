@@ -23,9 +23,9 @@ class MainActivity : BridgeActivity() {
         capturePendingRoute(intent)
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent?.let { capturePendingRoute(it) }
+        capturePendingRoute(intent)
     }
 
     private fun capturePendingRoute(intent: Intent) {

@@ -11,6 +11,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ProgressBar } from '../components/ProgressBar';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SearchIcon } from '../components/icons';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { fr } from '../i18n/fr';
 import { services } from '../app/services';
 import { loadLibraryState } from '../app/libraryState';
@@ -28,6 +29,7 @@ export function DiagnosticScreen() {
   const [entries, setEntries] = useState<DiagnosticEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewSplash, setPreviewSplash] = useState(false);
 
   const probe = useCallback(async () => {
     setLoading(true);
@@ -153,6 +155,9 @@ export function DiagnosticScreen() {
             <button className="btn-secondary" type="button" onClick={() => void probe()}>
               {fr.diagnostics.refresh}
             </button>
+            <button className="btn-secondary" type="button" onClick={() => setPreviewSplash(true)}>
+              Tester l'écran de chargement
+            </button>
             <button className="btn-primary" type="button" onClick={onExport}>
               {fr.diagnostics.export}
             </button>
@@ -160,6 +165,14 @@ export function DiagnosticScreen() {
 
           <p className="demo-notice">{fr.diagnostics.privacy}</p>
         </>
+      )}
+
+      {previewSplash && (
+        <LoadingScreen
+          message="Démonstration du démarrage A.MS…"
+          minDuration={2200}
+          onFinish={() => setPreviewSplash(false)}
+        />
       )}
     </section>
   );

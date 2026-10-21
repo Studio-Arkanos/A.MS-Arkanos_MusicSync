@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - uses: actions/setup-node@v4
         with:
@@ -56,6 +56,7 @@ jobs:
           APK_PATH=android/app/build/outputs/apk/debug/app-debug.apk
           if [ ! -s "$APK_PATH" ]; then
             echo "::error::L'APK n'a pas été produit à $APK_PATH"
+            find android/app/build -maxdepth 5 -ls || true
             exit 1
           fi
           cp "$APK_PATH" A-MS-debug.apk
@@ -79,7 +80,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - uses: actions/setup-node@v4
         with:

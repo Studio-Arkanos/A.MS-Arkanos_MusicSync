@@ -16,6 +16,9 @@ ext {
 
     // A.MS — versions verrouillées (Studio-Arkanos)
     kotlinVersion = '2.1.21'
-    roomVersion = '2.6.1'
+    // Room 2.6.1 embarque un kotlin-metadata trop ancien pour Kotlin 2.1
+    // (« Provided Metadata instance has version 2.1.0 ») : on reste sur la
+    // dernière 2.8.x stable, compatible Kotlin 2.1/2.2.
+    roomVersion = '2.8.5'
     workManagerVersion = '2.9.0'
 }
