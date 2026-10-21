@@ -94,7 +94,7 @@ export function HomeScreen() {
           <div className="ams-hero__badges">
             <span className="ams-hero__chip ams-hero__chip--gold">A.MS v0.1.0</span>
             <span className="ams-hero__chip ams-hero__chip--cyan">Stockage SAF</span>
-            <span className="ams-hero__chip">Base Room locale</span>
+            <span className="ams-hero__chip">Bibliothèque locale</span>
           </div>
         </div>
       </div>

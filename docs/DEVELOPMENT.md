@@ -31,7 +31,7 @@ npm run android:build   # ./gradlew assembleDebug (nécessite le SDK)
 ```
 android/
 ├── app/
-│   ├── build.gradle              # module app (Kotlin + kapt + Room)
+│   ├── build.gradle              # module app (Kotlin + plugins Android)
 │   ├── capacitor.build.gradle    # généré par Capacitor
 │   └── src/main/
 │       ├── AndroidManifest.xml
@@ -41,9 +41,6 @@ android/
 │       │   ├── plugins/AmsNativePlugin.kt
 │       │   ├── plugins/AmsPlayerPlugin.kt   # MediaPlayer (fichiers locaux)
 │       │   └── data/
-│       │       ├── AppDatabase.kt     # Room
-│       │       ├── TrackDao.kt
-│       │       └── TrackEntity.kt
 │       └── res/
 ├── build.gradle                  # classpath Kotlin
 ├── settings.gradle
@@ -72,7 +69,7 @@ android/
 ```bash
 npm test
 ```
-Couverture (178 tests, étape 4) :
+Couverture actuelle (187 tests automatisés) :
 - normalisation : exemples du cahier (4 variantes
   « Gims - Spider » → « gims spider »), qualité,
   promotionnels, marqueurs de version conservés ;

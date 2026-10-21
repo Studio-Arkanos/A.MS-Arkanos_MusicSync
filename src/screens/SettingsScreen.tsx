@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AmsNative from '../plugins/amsNative';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { StatusBadge } from '../components/StatusBadge';
-import { APP, DEFAULT_LIBRARY_FOLDER, FEATURES } from '../config/app.config';
+import { APP, FEATURES } from '../config/app.config';
 import { fr } from '../i18n/fr';
 import { services } from '../app/services';
 import { loadSettings } from '../app/settings';
@@ -121,10 +121,8 @@ export function SettingsScreen() {
         <input
           id="folder-input"
           className="input"
-          value={settings.libraryFolder || DEFAULT_LIBRARY_FOLDER}
-          onChange={(event) =>
-            setSettings({ ...settings, libraryFolder: event.target.value })
-          }
+          value={settings.libraryFolder || 'Aucun dossier choisi (utilisez le sélecteur SAF)'}
+          readOnly
         />
 
         <label className="input-label" htmlFor="dl-folder">

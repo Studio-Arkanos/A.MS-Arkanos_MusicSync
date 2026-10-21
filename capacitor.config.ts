@@ -9,8 +9,8 @@ const config = {
   webDir: 'dist',
   backgroundColor: '#0b1220', // bleu nuit, en accord avec l'identité visuelle
   plugins: {
-    // Plugin natif personnalisé AmsNative (implémenté dans android/app, Kotlin)
     AmsNative: {},
+    AmsPlayer: {},
   },
 };
 

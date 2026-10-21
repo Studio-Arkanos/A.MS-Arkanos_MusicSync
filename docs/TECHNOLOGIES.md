@@ -63,7 +63,6 @@ validation juridique de licence et build Android vérifié.
 | Kotlin | 2.1.21 | Code natif Android |
 | AGP (Gradle) | 8.13.0 | Build Android (template Capacitor) |
 | Gradle (wrapper) | 8.14.3 | Build Android |
-| Room | 2.6.1 | SQLite (via kapt) |
 | compileSdk / targetSdk | 36 | Template Capacitor 8 |
 | minSdk | 24 | Android 7.0+ |
 
@@ -71,17 +70,14 @@ validation juridique de licence et build Android vérifié.
 
 - **Vite 8** : disponible, mais plugin-react 6 s'appuie sur des peers
   optionnels Rolldown/oxc ; Vite 7 est plus éprouvé à date égale.
-- **KSP** plutôt que kapt : KSP exige un alignement strict de version
-  avec le compilateur Kotlin ; kapt (inclus dans le plugin Kotlin) est
-  suffisant pour Room à ce stade.
+- **Room / KSP / kapt** : retirés de cette version, car les entités/DAO n'étaient reliés ni au plugin Android ni à l'interface. La persistance active est localStorage WebView ; annoncer Room opérationnel aurait été trompeur.
 - **iOS** : non ajouté (`@capacitor/ios` absent) — le cahier des charges
   vise Android.
 - **Framework UI (Material UI, etc.)** : écarté pour les performances
   sur smartphones d'entrée de gamme ; CSS maison (~300 lignes).
 - **Bibliothèque i18n** : écartée (une seule langue à ce stade) ;
   chaînes centralisées dans `src/i18n/fr.ts`.
-- **SQLite web (sql.js) côté web** : inutile — la persistance réelle
-  sera Room côté Android via le plugin natif.
+- **SQLite/Room** : non intégré ; les données métier restent dans localStorage de la WebView afin de réduire les dépendances natives et ne pas présenter un pont inexistant comme réel.
 
 ## Contraintes d'architecture respectées
 

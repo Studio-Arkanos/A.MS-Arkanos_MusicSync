@@ -2,7 +2,7 @@
 
 ## Étape 1 — fondations ✅
 Architecture modulaire, interface 7 écrans, CI,
-plugin natif, Room (schéma).
+plugins natifs Capacitor.
 
 ## Étape 2 — playlist, bibliothèque, doublons, exclusions ✅
 Playlist Zenith, analyse YouTube, scan SAF,
@@ -66,14 +66,9 @@ exclusions persistantes, planificateur, décisions.
 - [x] Docs : INSTALLATION, BUILD_ANDROID, TESTS,
       KNOWN_LIMITATIONS
 - [ ] Tests instrumentés Android (device réel)
-- [ ] Pont web ↔ Room (alimentation de Room depuis
-      l'interface — localStorage opérationnel en
-      attendant, état « limité » au diagnostic)
+- [ ] Sauvegarde/export manuel des données locales (pas de serveur/compte)
 - [ ] Accessibilité complète, localisations supplémentaires
 
-> Distinction honnête : développé et testé unitairement
-> dans ce sandbox (178 tests) ; la compilation Kotlin/Gradle
-> et le build APK sont exécutés par CI (GitHub Actions) —
-> non réalisés dans cet environnement (pas de SDK Android).
+> Distinction honnête : tests web (186 tests) et build web vérifiés localement. Pour cette révision, `assembleDebug` n'a pas pu être exécuté dans l'environnement local faute de JDK (`java` absent) ; le build Android CI doit valider les changements natifs.
 > Tests sur appareil réel : à effectuer après installation
 > de l'APK (voir docs/INSTALLATION.md).

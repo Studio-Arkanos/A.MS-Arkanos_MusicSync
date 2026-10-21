@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AmsNative from '../plugins/amsNative';
 import {
   DEFAULT_PLAYLIST,
+  parseLocalPlaylist,
   type PlaylistAnalysis,
   type PlaylistConfig,
 } from '../modules/playlist/playlist';
@@ -116,6 +118,25 @@ export function PlaylistScreen() {
     savePlaylistConfig(services.storage, cleaned);
     setConfig(cleaned);
     setNotice(fr.playlist.saved);
+  };
+
+  const onImportLocalPlaylist = async () => {
+    setAnalyzing(true);
+    setNotice(null);
+    try {
+      const { uri } = await AmsNative.pickFile();
+      const { content } = await AmsNative.readTextFile({ uri });
+      const result = parseLocalPlaylist(content);
+      setAnalysis(result);
+      savePlaylistAnalysis(services.storage, result);
+      setNotice(result.status === 'ok'
+        ? `Playlist locale importée : ${result.tracks.length} entrée(s).`
+        : 'Playlist locale vide : aucune entrée trouvée.');
+    } catch (error) {
+      setNotice(`Import de playlist locale impossible : ${(error as Error).message}`);
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const onAnalyze = async () => {
@@ -352,6 +373,9 @@ export function PlaylistScreen() {
             disabled={analyzing}
           >
             {analyzing ? fr.playlist.analyzing : fr.playlist.analyze}
+          </button>
+          <button className="btn-secondary" type="button" onClick={() => void onImportLocalPlaylist()} disabled={analyzing}>
+            Importer une playlist locale (M3U/PLS/TXT)
           </button>
         </div>
       </section>

@@ -38,8 +38,6 @@ export interface DiagnosticContext {
   jamendoConfigured: boolean;
   youtubeConfigured: boolean;
   downloadEngineAvailable: boolean;
-  /** Pont web ↔ Room (SQLite natif) connecté. */
-  roomBridgeConnected: boolean;
   backgroundScheduled: boolean;
   online: boolean;
   storageWritable: boolean;
@@ -51,21 +49,14 @@ export function buildDiagnosticReport(
 ): DiagnosticEntry[] {
   const entries: DiagnosticEntry[] = [];
 
-  // --- Base de données ---
-  entries.push(
-    context.roomBridgeConnected
-      ? {
-          component: 'database',
-          state: 'operational',
-          detail: 'Room (SQLite natif) connecté.',
-        }
-      : {
-          component: 'database',
-          state: 'limited',
-          detail:
-            'Persistance WebView (localStorage) opérationnelle ; pont web ↔ Room non connecté — la base native Room reste préparée, non alimentée.',
-        },
-  );
+  // --- Stockage local réel ---
+  entries.push({
+    component: 'database',
+    state: context.storageWritable ? 'operational' : 'error',
+    detail: context.storageWritable
+      ? 'Stockage local WebView (localStorage) accessible ; sans sauvegarde serveur.'
+      : 'Écriture localStorage impossible ; les changements ne peuvent pas être persistés.',
+  });
 
   // --- Permissions ---
   if (!context.isNative) {
