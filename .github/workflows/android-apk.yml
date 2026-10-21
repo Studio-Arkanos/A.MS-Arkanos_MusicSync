@@ -61,12 +61,17 @@ jobs:
 
       - name: Vérifier et nommer l'APK
         run: |
-          APK_PATH=android/app/build/outputs/apk/debug/app-debug.apk
-          if [ ! -s "$APK_PATH" ]; then
-            echo "::error::L'APK n'a pas été produit à $APK_PATH"
+          APK_FOUND=$(find android -name "*.apk" -type f | grep -i "debug" | head -n 1)
+          if [ -z "$APK_FOUND" ]; then
+            APK_FOUND=$(find android -name "*.apk" -type f | head -n 1)
+          fi
+          if [ -z "$APK_FOUND" ] || [ ! -s "$APK_FOUND" ]; then
+            echo "::error::Aucun fichier .apk valide trouvé dans android/"
+            find android/app/build/outputs -maxdepth 4 -ls || true
             exit 1
           fi
-          cp "$APK_PATH" A-MS-debug.apk
+          echo "APK localisé avec succès : $APK_FOUND"
+          cp "$APK_FOUND" A-MS-debug.apk
 
       - name: Publier l'APK de débogage
         uses: actions/upload-artifact@v4
