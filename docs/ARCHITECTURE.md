@@ -6,8 +6,9 @@ Application Android **hybride Capacitor 8** : l'interface et la logique
 métier sont écrites en React 19 + TypeScript, compilées par Vite 7, puis
 embarquées dans un APK Android natif via Capacitor. Les fonctions
 nécessitant le système (lecture média, notifications, planification)
-passent par un **plugin Capacitor personnalisé** (`AmsNative`) écrit en
-Kotlin. La persistance utilise **Room** (SQLite) côté Android.
+passent par deux plugins Capacitor personnalisés (`AmsNative`, `AmsPlayer`)
+écrits en Kotlin. La persistance de l'interface est le `localStorage` de
+la WebView ; Room n'est pas utilisé.
 
 Ce n'est **pas** une WebView pointant vers un serveur local : le bundle
 web est packagé dans l'APK et l'application fonctionne hors ligne.
@@ -16,7 +17,7 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
 ┌────────────────────────────────────────────────────────┐
 │  APK Android (com.arkanos.ams) — Kotlin                │
 │  ┌──────────────┐   ┌─────────────┐   ┌────────────┐  │
-│  │ MainActivity │──▶│ AmsNative   │──▶│ Room/SQLite│  │
+│  │ MainActivity │──▶│ AmsNative / │──▶│ SAF + Android│ │
 │  │ (Bridge)     │   │ (plugin)    │   │ AppDatabase│  │
 │  └──────────────┘   └──────┬──────┘   └────────────┘  │
 │                            │ JSBridge (Capacitor)      │
@@ -157,13 +158,12 @@ web est packagé dans l'APK et l'application fonctionne hors ligne.
   ouvrant l'écran du morceau (deep-link `/track/:ref`).
 
 ### Tâches en arrière-plan (`src/modules/background/`)
-- `BackgroundTaskScheduler` stub ; WorkManager à l'étape 3.
+- WorkManager peut relancer un comptage périodique (best effort Android) ; ce worker ne fait pas une synchronisation complète de playlist et ne met pas à jour la bibliothèque persistée.
 
-### Base de données (`src/modules/database/` + `android/…/data/`)
-- Côté web : interfaces de dépôts + implémentations en mémoire **vides**
-  (réelles, sans données de démonstration).
-- Côté Android : `AppDatabase` (Room), `TrackEntity`, `TrackDao`
-  déjà compilables ; connexion au plugin à l'étape 2.
+### Persistance locale
+- Les réglages, scans, favoris, playlists utilisateur, décisions et historique sont conservés dans le `localStorage` de la WebView.
+- Le stockage reste présent après fermeture/réouverture ordinaire, mais pas garanti après effacement des données ou désinstallation.
+- Room/SQLite n'est pas utilisé et a été retiré pour ne pas embarquer une couche morte.
 
 ### Historique (`src/modules/history/`) — **opérationnel**
 - Consigne les événements réels (démarrage, tentatives, erreurs).
@@ -234,17 +234,15 @@ scan local (SAF / DocumentFile) → normalisation (nom de fichier)
   → exclusions (stockage local, identité stable)
   → plan : présent / incertain (décision) / absent (candidat)
   → résumé affiché AVANT toute opération
-  → téléchargements (liste blanche — étape 3) → Room → historique
+  → téléchargements autorisés (DownloadManager) → historique local
   → orchestration (étape 4) : association fournisseurs
     autorisés → DownloadManager → rapport réel
   → arrière-plan : WorkManager analyse périodique
 ```
 
-### Persistance (étape 2)
-- Exclusions, décisions, playlist, bibliothèque, paramètres :
-  localStorage de la WebView Capacitor (survit au redémarrage).
-- Schéma Room complet côté Android (tracks, exclusions,
-  pending_decisions, playlists) — pont web ↔ Room à l'étape 3.
+### Persistance
+- Exclusions, décisions, playlist, bibliothèque, paramètres, favoris et playlists utilisateur : `localStorage` de la WebView Capacitor.
+- Le contenu n'est pas sauvegardé vers Room/SQLite ni vers un serveur.
 
 ### Identités stables
 - Exclusion : (sourceId = id playlist, trackRef = id vidéo).
@@ -257,8 +255,7 @@ scan local (SAF / DocumentFile) → normalisation (nom de fichier)
 1. **Kotlin dès la base** — le template Capacitor Android est Java par
    défaut ; il a été converti (MainActivity + modules) conformément au
    cahier des charges.
-2. **kapt (pas KSP) pour Room** — évite le couplage de version
-   KSP/compilateur Kotlin à cette étape de démarrage.
+2. **Pas de base native Room** — les DAOs n'étaient jamais raccordés au pont ; supprimer ce code mort évite d'embarquer une dépendance inactive. Les données métier restent en localStorage pour cette version.
 3. **HashRouter** — aucun serveur requis pour le routage dans la WebView.
 4. **CSS pur** — pas de framework UI : empreinte minimale pour les
    smartphones d'entrée de gamme.

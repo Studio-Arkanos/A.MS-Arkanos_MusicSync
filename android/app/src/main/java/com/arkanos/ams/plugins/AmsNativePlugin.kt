@@ -220,15 +220,76 @@ class AmsNativePlugin : Plugin() {
 
     /* ---------------- Dossier (Storage Access Framework) ---------------- */
 
+    // M3U / fichier texte : sélection d'un fichier de playlist locale
+    private var pendingFileCall: PluginCall? = null
+    private val REQUEST_PICK_FILE = 41003
+
     @PluginMethod(returnType = PluginMethod.RETURN_NONE)
     fun pickFolder(call: PluginCall) {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
         try {
             pendingFolderCall = call
             getActivity().startActivityForResult(intent, REQUEST_PICK_FOLDER)
         } catch (e: Exception) {
             pendingFolderCall = null
             call.reject("PICK_FOLDER_FAILED: ${e.message}")
+        }
+    }
+
+    /** Sélecteur générique : fichier .m3u, .m3u8, .pls, .xspf, .txt */
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun pickFile(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "text/plain", "application/x-mpegurl", "audio/x-mpegurl", "application/pls+xml"))
+        }
+        try {
+            pendingFileCall = call
+            getActivity().startActivityForResult(intent, REQUEST_PICK_FILE)
+        } catch (e: Exception) {
+            pendingFileCall = null
+            call.reject("PICK_FILE_FAILED: ${e.message}")
+        }
+    }
+
+    /** Lit le contenu texte d'un DocumentFile (M3U, PLS, TXT) */
+    @PluginMethod(returnType = PluginMethod.RETURN_NONE)
+    fun readTextFile(call: PluginCall) {
+        val uriString = call.getString("uri")
+        if (uriString.isNullOrBlank()) {
+            call.reject("READ_MISSING_URI")
+            return
+        }
+        try {
+            val uri = Uri.parse(uriString)
+            val input = context.contentResolver.openInputStream(uri)
+                ?: run { call.reject("READ_OPEN_FAILED"); return }
+            // Lecture bornée : ne charge pas un fichier sans limite en RAM
+            // sur les appareils d'entrée de gamme.
+            val text = input.bufferedReader(Charsets.UTF_8).use { reader ->
+                val buffer = CharArray(16 * 1024)
+                val out = StringBuilder()
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count < 0) break
+                    if (out.length + count > 1_000_000) {
+                        call.reject("READ_TOO_LARGE: fichier supérieur à 1 Mo")
+                        return
+                    }
+                    out.append(buffer, 0, count)
+                }
+                out.toString()
+            }
+            val result = JSObject().apply { put("content", text) }
+            call.resolve(result)
+        } catch (e: SecurityException) {
+            call.reject("READ_PERMISSION_DENIED: ${e.message}")
+        } catch (e: Exception) {
+            call.reject("READ_ERROR: ${e.message}")
         }
     }
 
@@ -243,30 +304,40 @@ class AmsNativePlugin : Plugin() {
     fun scanLibrary(call: PluginCall) {
         val folderUri = call.getString("folderUri")
         if (folderUri.isNullOrBlank()) {
-            call.reject("SCAN_MISSING_FOLDER: aucun dossier indiqué.")
+            call.reject("SCAN_MISSING_FOLDER: aucun dossier indiqué. Choisissez un dossier via le sélecteur SAF.")
+            return
+        }
+        // Android 11 : les chemins /storage/emulated/... ne sont plus accessibles
+        // en direct. Il faut impérativement une URI content:// obtenue via SAF.
+        if (!folderUri.startsWith("content://")) {
+            call.reject("SCAN_NOT_SAF_URI: ce chemin n'est pas accessible sur Android 11+ — veuillez choisir un dossier via le bouton « Choisir un dossier » (SAF).")
             return
         }
         // Mémorisation native : le worker WorkManager peut
         // relancer l'analyse sans l'interface web.
         prefs().edit().putString(KEY_SCAN_FOLDER, folderUri).apply()
-        try {
-            val tree = DocumentFile.fromTreeUri(context, Uri.parse(folderUri))
-            if (tree == null || !tree.exists()) {
-                call.reject("SCAN_FOLDER_INACCESSIBLE: dossier inaccessible (permission révoquée ?).")
-                return
+        // DocumentFile.listFiles() peut être très lent sur stockage USB/SAF.
+        // Ne jamais parcourir une bibliothèque entière sur le thread UI.
+        Thread {
+            try {
+                val tree = DocumentFile.fromTreeUri(context, Uri.parse(folderUri))
+                if (tree == null || !tree.exists()) {
+                    call.reject("SCAN_FOLDER_INACCESSIBLE: dossier inaccessible (permission révoquée ?). Réessayez de sélectionner le dossier.")
+                    return@Thread
+                }
+                val files = JSArray()
+                walk(tree, files)
+                val result = JSObject().apply {
+                    put("files", files)
+                    put("count", files.length())
+                }
+                call.resolve(result)
+            } catch (e: SecurityException) {
+                call.reject("SCAN_PERMISSION_DENIED: permission révoquée — ${e.message}. Sélectionnez à nouveau le dossier.")
+            } catch (e: Exception) {
+                call.reject("SCAN_ERROR: ${e.message}")
             }
-            val files = JSArray()
-            walk(tree, files)
-            val result = JSObject().apply {
-                put("files", files)
-                put("count", files.length())
-            }
-            call.resolve(result)
-        } catch (e: SecurityException) {
-            call.reject("SCAN_PERMISSION_DENIED: ${e.message}")
-        } catch (e: Exception) {
-            call.reject("SCAN_ERROR: ${e.message}")
-        }
+        }.start()
     }
 
     private fun walk(directory: DocumentFile, out: JSArray) {
@@ -584,6 +655,25 @@ class AmsNativePlugin : Plugin() {
 
     override fun handleOnActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.handleOnActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_PICK_FILE) {
+            val call = pendingFileCall ?: return
+            pendingFileCall = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) {
+                call.reject("PICK_FILE_CANCELLED: aucun fichier choisi.")
+                return
+            }
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION),
+                )
+                call.resolve(JSObject().apply { put("uri", uri.toString()) })
+            } catch (e: Exception) {
+                call.reject("PICK_FILE_PERMISSION: ${e.message}")
+            }
+            return
+        }
         if (requestCode != REQUEST_PICK_FOLDER) return
         val call = pendingFolderCall ?: return
         pendingFolderCall = null
@@ -595,10 +685,14 @@ class AmsNativePlugin : Plugin() {
         val uri = data.data!!
         try {
             // Autorisation persistante : survit au redémarrage.
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val persistableFlags = data.flags and (
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
+            if (persistableFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION == 0) {
+                call.reject("PICK_FOLDER_READ_PERMISSION: Android n'a pas accordé la lecture du dossier.")
+                return
+            }
+            context.contentResolver.takePersistableUriPermission(uri, persistableFlags)
             prefs().edit().putString(KEY_LAST_FOLDER, uri.toString()).apply()
             val result = JSObject().apply { put("uri", uri.toString()) }
             call.resolve(result)

@@ -69,6 +69,7 @@ export function DiagnosticScreen() {
       let storageWritable = true;
       try {
         services.storage.set('ams.diagnostic.probe', '1');
+        storageWritable = services.storage.get('ams.diagnostic.probe') === '1';
         services.storage.remove('ams.diagnostic.probe');
       } catch {
         storageWritable = false;
@@ -87,7 +88,6 @@ export function DiagnosticScreen() {
         jamendoConfigured: settings.jamendoClientId.trim().length > 0,
         youtubeConfigured: settings.youtubeApiKey.trim().length > 0,
         downloadEngineAvailable: services.downloadEngine.available,
-        roomBridgeConnected: false, // pont web ↔ Room : non connecté (documenté)
         backgroundScheduled,
         online: navigator.onLine,
         storageWritable,

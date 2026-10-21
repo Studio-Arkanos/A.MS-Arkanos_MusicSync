@@ -9,16 +9,8 @@
   Organisation : <strong>Studio-Arkanos</strong> · Identifiant Android : <code>com.arkanos.ams</code> · Langue : français.
 </p>
 
-> **Statut : étape 4/4 — finalisation et livraison.**
-> Application Android complète : orchestration de
-> synchronisation réelle (plan → association →
-> DownloadManager), lecteur natif (fichiers locaux),
-> favoris, playlists utilisateur, arrière-plan
-> WorkManager, permission runtime de notification,
-> écran de diagnostic, APK produit par CI.
-> La conversion audio n'est PAS intégrée
-> (aucune solution vérifiée — documenté).
-> Aucune donnée n'est jamais simulée.
+> **Statut : audit / réparation en cours de validation sur appareil.**
+> Les fonctions locales (scan SAF, lecteur natif, favoris et playlists via stockage WebView) sont implémentées. La compilation web et les tests automatisés sont vérifiables ; la compilation Android a réussi sur GitHub Actions ; un essai sur Android 11 ARMv7 reste à réaliser. Room a été retiré car aucun pont ne l'utilisait. Aucune donnée n'est fabriquée.
 
 ## Identité visuelle & Logo officiel
 
@@ -41,7 +33,8 @@ Le logo officiel d'**A.MS** réunit les dimensions fondamentales du projet :
 
 | Module | Statut |
 | --- | --- |
-| Analyse de playlist (YouTube Data API v3) | ✅ Opérationnel (clé requise) |
+| Import de playlist locale (M3U/PLS/TXT) | ✅ Sans clé / hors ligne (titres; pas de résolution automatique des chemins) |
+| Analyse de playlist YouTube (Data API v3) | ⚪ Optionnelle (clé, réseau et quota requis) |
 | Scan de bibliothèque locale (SAF) | ✅ Opérationnel (Android) |
 | Normalisation / doublons / exclusions | ✅ Opérationnels (testés) |
 | Décisions en attente + notifications | ✅ Opérationnel |
@@ -57,7 +50,7 @@ Le logo officiel d'**A.MS** réunit les dimensions fondamentales du projet :
 | Arrière-plan (WorkManager — analyse périodique) | ✅ Opérationnel (Android) |
 | Écran de diagnostic | ✅ Opérationnel (états réels) |
 | Conversion audio | ⚪ Non intégrée (documenté) |
-| Pont web ↔ Room | 🟡 Préparé, non connecté |
+| Persistance locale | ✅ localStorage WebView ; Room supprimé car non raccordé |
 
 ## Fournisseurs
 
@@ -81,18 +74,14 @@ Build local et signature release :
 [docs/BUILD_ANDROID.md](docs/BUILD_ANDROID.md).
 Limitations réelles : [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 
-## Prérequis
+## Prérequis et coûts
 
 - **Node.js ≥ 22** (compilation uniquement)
-- Android Studio / GitHub Actions pour l'APK
-- Clés : YouTube Data API v3 (Google Cloud) et/ou
-  Jamendo client_id (devportal.jamendo.com) — stockées
-  localement, jamais envoyées ailleurs que vers les API
-  officielles.
+- Android Studio / GitHub Actions pour construire l'APK
+- Aucun compte, clé API, abonnement ou serveur requis pour scanner et lire les fichiers locaux.
+- Les intégrations réseau sont facultatives : YouTube Data API exige une clé et reste soumise au quota Google ; Jamendo exige un `client_id` et n'autorise les téléchargements que pour les titres concernés. Ces intégrations ne sont pas nécessaires à la bibliothèque locale.
 
-L'application finale est **100 % autonome** : aucun
-Termux, Python, Node.js, PostgreSQL, serveur web ou
-VPS requis sur l'appareil.
+L'application installée ne requiert ni Termux, Python, Node.js, serveur web ou VPS. Le scan et la lecture fonctionnent hors ligne après sélection du dossier via SAF. Les téléchargements nécessitent Internet et une URL directe effectivement autorisée.
 
 ## Installation et développement
 
@@ -101,7 +90,7 @@ npm ci                 # dépendances verrouillées
 npm run dev            # dev web (preview)
 npm run typecheck      # TypeScript strict
 npm run lint           # ESLint
-npm test               # 178 tests unitaires
+npm test               # 187 tests unitaires
 npm run build          # build web → dist/
 npm run cap:sync       # injection dans le projet Android
 npm run cap:open:android
@@ -126,6 +115,10 @@ npm run android:build  # APK debug (requiert le SDK)
   YouTube ;
 - aucune extraction YouTube, aucun contournement de
   paywall/DRM.
+
+## Audit / limites et instructions
+
+Le rapport honnête des causes, choix, coûts, compatibilités et validations est dans [docs/REPORT_AUDIT_AND_REPAIR.md](docs/REPORT_AUDIT_AND_REPAIR.md). Pour la bibliothèque Android 11, choisissez toujours le dossier avec **SAF** ; un chemin tapé `/storage/...` ne donne pas de permission.
 
 ## Documentation
 
