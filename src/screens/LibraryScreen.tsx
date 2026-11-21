@@ -122,7 +122,7 @@ export function LibraryScreen() {
       </section>
 
       <form onSubmit={onScan}>
-        <button className="btn-primary" type="submit" disabled={scanning}>
+        <button className="btn-primary" type="submit" disabled={scanning || !folder.startsWith('content://')}>
           {scanning ? fr.library.scanning : fr.library.scan}
         </button>
       </form>

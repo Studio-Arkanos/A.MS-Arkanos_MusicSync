@@ -43,7 +43,7 @@ export class SyncEngineStub implements SyncEngine {
   async sync(): Promise<SyncReport> {
     throw new SyncEngineError(
       'NOT_CONFIGURED',
-      'SYNC_NOT_CONFIGURED : le moteur sera opérationnel à l’étape 2 (fournisseurs + Room).',
+      'SYNC_NOT_CONFIGURED : aucun moteur utilisable n’est configuré pour cette plateforme.',
     );
   }
 }

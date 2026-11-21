@@ -6,10 +6,10 @@
 | --- | --- | --- |
 | Lint | `npm run lint` | ✅ ESLint propre |
 | Types | `npm run typecheck` | ✅ TypeScript strict, 0 erreur |
-| Tests unitaires | `npm test` | ✅ 178 tests / 24 fichiers |
+| Tests unitaires | `npm test` | ✅ 187 tests / 25 fichiers |
 | Build web | `npm run build` | ✅ Vite |
 | Sync Capacitor | `npx cap sync android` | ✅ |
-| Compile Android | `./gradlew assembleDebug` | 🔁 CI GitHub Actions (pas de SDK dans l'environnement de développement) |
+| Compile Android | `./gradlew assembleDebug --no-daemon` | ⚠️ Non exécuté localement : JDK/JAVA_HOME absents dans cet environnement. CI à exécuter sur cette révision. |
 
 ## Couverture unitaire (Vitest, environnement Node)
 
@@ -18,8 +18,7 @@
   « Gims - Spider »).
 - **Matching** : seuils 95 %/80 %, trois états,
   original vs remix, artiste divergent.
-- **Playlist** : vide ≠ erreur ≠ indisponible, clé
-  manquante, pagination, vidéos privées/supprimées.
+- **Playlist** : import M3U/PLS local, vide ≠ erreur ≠ indisponible, clé manquante, pagination, vidéos privées/supprimées.
 - **Scan local** : formats, sans métadonnée, dossier
   vide, dossier inaccessible.
 - **Exclusions** : individuelles, groupées, persistance

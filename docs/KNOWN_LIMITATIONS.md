@@ -10,12 +10,7 @@ vérifiable dans le code ou l'écran Diagnostic.
   build non vérifiable). Les fichiers sources sont
   conservés tels quels. Aucune conversion n'est
   jamais prétendue.
-- **Pont web ↔ Room** : NON connecté. La persistance
-  de l'interface est le localStorage de la WebView
-  (opérationnel, survit au redémarrage). Les DAOs
-  Room sont compilables et prêts, mais non alimentés
-  depuis le web. État affiché : « limité » au
-  diagnostic.
+- **Persistance** : l'interface stocke les données dans le localStorage de la WebView, qui survit aux redémarrages ordinaires mais peut être effacé avec les données de l'application. Room n'est pas utilisé et a été retiré ; aucune sauvegarde vers SQLite n'est promise.
 - **Synchronisation globale en arrière-plan** :
   WorkManager planifie l'ANALYSE périodique de la
   bibliothèque (12 h, contraintes réseau + batterie).
@@ -36,9 +31,7 @@ vérifiable dans le code ou l'écran Diagnostic.
   recommandés (permission runtime de notification).
 - **Android 24–25** : icône adaptative non prise en
   charge (icône PNG par défaut du template Capacitor).
-- **Processeurs** : aucune dépendance native tierce
-  (WebGL/FFmpeg) — arm64-v8a, armeabi-v7a, x86_64
-  couverts par Capacitor/WebView.
+- **ARMv7** : aucune bibliothèque native audio tierce n'a été ajoutée. Toutefois, aucun APK de cette révision n'a été compilé localement ni inspecté pour ses ABI, et aucun téléphone ARMv7 n'a été testé. Android 11 est dans la plage minSdk, mais l'exécution ARMv7 doit encore être vérifiée sur appareil/artefact.
 - **Stockage insuffisant** : DownloadManager échoue
   lui-même ; A.MS affiche l'échec réel de la tâche
   (jamais un succès simulé).

@@ -48,6 +48,9 @@ export interface AmsNativePlugin {
 
   /** Sélecteur de dossier (Storage Access Framework). */
   pickFolder(): Promise<{ uri: string | null }>;
+  /** Sélection d’un fichier local, notamment playlist M3U/PLS. */
+  pickFile(): Promise<{ uri: string }>;
+  readTextFile(options: { uri: string }): Promise<{ content: string }>;
   getLastFolder(): Promise<{ uri: string | null }>;
 
   /** Liste les fichiers audio d'un dossier (SAF / DocumentFile). */

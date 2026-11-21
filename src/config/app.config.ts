@@ -26,7 +26,7 @@ export const FEATURES: Record<string, { status: ModuleStatus; label: string }> =
   downloadProviders: { status: 'operational', label: 'Téléchargement autorisé (Jamendo, DownloadManager)' },
   notifications: { status: 'operational', label: 'Notifications (permission runtime Android 13+)' },
   backgroundTasks: { status: 'operational', label: 'Arrière-plan (WorkManager — analyse périodique)' },
-  database: { status: 'operational', label: 'Base locale (persistance WebView ; Room prêt)' },
+  database: { status: 'operational', label: 'Stockage local de la WebView (localStorage)' },
   history: { status: 'operational', label: 'Historique des opérations' },
   conversion: { status: 'planned', label: 'Conversion audio (aucune solution vérifiée)' },
   urlImport: { status: 'operational', label: 'Import d’URL vérifié' },
@@ -39,7 +39,9 @@ export const FEATURES: Record<string, { status: ModuleStatus; label: string }> =
 };
 
 /** Dossier de bibliothèque locale par défaut (cahier des charges). */
-export const DEFAULT_LIBRARY_FOLDER = '/storage/emulated/0/Music/Musics';
+// Android 11+ : aucun chemin filesystem brut n'est fiable avec Scoped Storage.
+// L'utilisateur doit choisir un dossier, dont l'URI SAF sera mémorisée.
+export const DEFAULT_LIBRARY_FOLDER = '';
 
 /**
  * Le moteur de synchronisation est RÉEL (étape 4) :

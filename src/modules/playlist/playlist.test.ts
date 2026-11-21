@@ -3,11 +3,33 @@ import {
   DEFAULT_PLAYLIST,
   extractPlaylistId,
   parseIsoDuration,
+  parseLocalPlaylist,
   YouTubePlaylistProvider,
 } from './playlist';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('parseLocalPlaylist', () => {
+  it('importe M3U avec titre étendu et chemins réels', () => {
+    const result = parseLocalPlaylist(`#EXTM3U
+#EXTINF:201,Artiste - Titre
+Music/track.mp3`);
+    expect(result.status).toBe('ok');
+    expect(result.tracks).toHaveLength(1);
+    expect(result.tracks[0]?.title).toBe('Artiste - Titre');
+    expect(result.tracks[0]?.source).toBe('local-playlist');
+  });
+
+  it('importe PLS en associant les titres et fichiers par index', () => {
+    const result = parseLocalPlaylist(`[playlist]\nFile2=second.mp3\nTitle2=Deuxième\nFile1=first.ogg\nTitle1=Première\nNumberOfEntries=2`);
+    expect(result.tracks.map((track) => track.title)).toEqual(['Première', 'Deuxième']);
+  });
+
+  it('une liste vide reste explicitement vide', () => {
+    expect(parseLocalPlaylist('#EXTM3U').status).toBe('empty');
+  });
 });
 
 /** fetch simulé renvoyant une réponse JSON. */

@@ -3,10 +3,9 @@ import type { OperationRecord, Track } from '../../domain/models';
 /**
  * Accès données côté web.
  *
- * Module PRÉPARÉ à l'étape 1 : la persistance réelle sera Room
- * (SQLite) côté Android, exposée via le plugin AmsNative à l'étape 2.
- * Les implémentations en mémoire ci-dessous sont RÉELLES mais vides :
- * elles ne contiennent aucune donnée de démonstration.
+ * Dépôts mémoire utilisés pour les tests et l'injection.
+ * La persistance applicative actuelle est le localStorage WebView.
+ * Ces dépôts ne prétendent pas sauvegarder au-delà de leur instance.
  */
 
 export interface TrackRepository {

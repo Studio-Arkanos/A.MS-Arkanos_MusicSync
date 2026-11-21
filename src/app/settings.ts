@@ -1,8 +1,8 @@
 import type { KeyValueStorage } from './storage';
 
 /**
- * Paramètres utilisateur persistés (clé YouTube, dossier local…).
- * La persistance réelle côté Android passera par Room à l'étape 3.
+ * Paramètres utilisateur persistés dans le stockage local de la WebView.
+ * Les secrets ne sont pas inclus dans les builds et restent facultatifs pour l'usage local.
  */
 
 export interface Settings {

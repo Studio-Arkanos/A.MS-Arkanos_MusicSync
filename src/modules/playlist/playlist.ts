@@ -64,6 +64,48 @@ export interface PlaylistProvider {
   analyze(config: PlaylistConfig, apiKey?: string): Promise<PlaylistAnalysis>;
 }
 
+/** Parse les playlists locales M3U/M3U8/PLS et les listes texte simples.
+ * Les entrées deviennent des références de liste seulement: l'import ne
+ * prétend pas résoudre des URL distantes en fichiers ni contourner un service.
+ */
+export function parseLocalPlaylist(content: string, analyzedAt = new Date().toISOString()): PlaylistAnalysis {
+  const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/).map((line) => line.trim());
+  const tracks: PlaylistTrack[] = [];
+
+  // PLS stocke séparément FileN= et TitleN=.
+  if (lines.some((line) => /^\[playlist\]$/i.test(line))) {
+    const files = new Map<number, string>();
+    const titles = new Map<number, string>();
+    for (const line of lines) {
+      const entry = /^(File|Title)(\d+)=(.*)$/i.exec(line);
+      if (!entry) continue;
+      const index = Number(entry[2]);
+      (entry[1]!.toLowerCase() === 'file' ? files : titles).set(index, entry[3]!.trim());
+    }
+    for (const [index, path] of [...files].sort(([a], [b]) => a - b)) {
+      const leaf = path.split(/[\\/]/).pop() ?? path;
+      tracks.push({ ref: `local-playlist-${index}-${path}`, title: titles.get(index) || leaf, artist: '', availability: 'available', source: 'local-playlist' });
+    }
+    return { status: tracks.length ? 'ok' : 'empty', playlistId: `local-${tracks.length}`, tracks, errors: [], analyzedAt };
+  }
+
+  let pendingTitle = '';
+  for (const line of lines) {
+    if (!line || line.startsWith('#')) {
+      const ext = /^#EXTINF:-?\d+,(.*)$/i.exec(line);
+      if (ext) pendingTitle = ext[1]!.trim();
+      continue;
+    }
+    const ref = `local-playlist-${tracks.length}-${line}`;
+    const pathLeaf = line.split(/[\\/]/).pop() ?? line;
+    const title = pendingTitle || pathLeaf.replace(/\.(mp3|m4a|aac|flac|ogg|wav)$/i, '').replace(/[_-]+/g, ' ').trim();
+    tracks.push({ ref, title: title || pathLeaf, artist: '', availability: 'available', source: 'local-playlist' });
+    pendingTitle = '';
+  }
+
+  return { status: tracks.length ? 'ok' : 'empty', playlistId: `local-${tracks.length}`, tracks, errors: [], analyzedAt };
+}
+
 /** Extrait l'identifiant de playlist d'une URL YouTube. */
 export function extractPlaylistId(url: string): string | null {
   const match = url.match(/[?&]list=([A-Za-z0-9_-]+)/);

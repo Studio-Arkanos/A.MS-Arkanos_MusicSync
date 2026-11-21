@@ -17,9 +17,12 @@ import com.arkanos.ams.plugins.AmsPlayerPlugin
 class MainActivity : BridgeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // Capacitor 8 : les plugins personnalisés doivent être
+        // enregistrés AVANT super.onCreate (qui construit le Bridge).
+        // L'ordre inverse explique « plugin is not implemented ».
         registerPlugin(AmsNativePlugin::class.java)
         registerPlugin(AmsPlayerPlugin::class.java)
+        super.onCreate(savedInstanceState)
         capturePendingRoute(intent)
     }
 

@@ -18,7 +18,6 @@ function context(
     jamendoConfigured: false,
     youtubeConfigured: false,
     downloadEngineAvailable: false,
-    roomBridgeConnected: false,
     backgroundScheduled: false,
     online: true,
     storageWritable: true,
@@ -32,7 +31,7 @@ describe('buildDiagnosticReport', () => {
     const byComponent = new Map(entries.map((e) => [e.component, e]));
     // Aucun composant critique n'est « opérationnel » sans preuve :
     // (connectivité + version d'application sont les seules légitimes).
-    expect(byComponent.get('database')!.state).toBe('limited');
+expect(byComponent.get('database')!.state).toBe('operational');
     expect(byComponent.get('permissions')!.state).toBe('untested');
     expect(byComponent.get('storage')!.state).toBe('permission_required');
     expect(byComponent.get('localLibrary')!.state).toBe('untested');
@@ -62,7 +61,7 @@ describe('buildDiagnosticReport', () => {
       }),
     );
     const byComponent = new Map(entries.map((e) => [e.component, e]));
-    expect(byComponent.get('database')!.state).toBe('limited'); // pont Room non connecté
+    expect(byComponent.get('database')!.state).toBe('operational'); // localStorage est le stockage réellement utilisé
     expect(byComponent.get('permissions')!.state).toBe('operational');
     expect(byComponent.get('storage')!.state).toBe('operational');
     expect(byComponent.get('localLibrary')!.state).toBe('operational');

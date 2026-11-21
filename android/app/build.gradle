@@ -1,6 +1,5 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
-apply plugin: 'kotlin-kapt'
 
 android {
     namespace = "com.arkanos.ams"
@@ -51,13 +50,6 @@ android {
     }
 }
 
-kapt {
-    arguments {
-        arg("room.schemaLocation", "$projectDir/schemas")
-        arg("room.incremental", "false")
-    }
-}
-
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -75,12 +67,8 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
 
-    // A.MS — Kotlin + Room (SQLite) pour la persistance locale
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
-    implementation "androidx.room:room-runtime:$roomVersion"
-    implementation "androidx.room:room-ktx:$roomVersion"
-    kapt "androidx.room:room-compiler:$roomVersion"
-    // SAF : parcours de dossiers distants (DocumentFile)
+    // SAF : parcours de dossiers et URI persistantes (DocumentFile)
     implementation "androidx.documentfile:documentfile:1.0.1"
     // Arrière-plan réel (analyse périodique de la bibliothèque)
     implementation "androidx.work:work-runtime-ktx:$workManagerVersion"

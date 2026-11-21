@@ -1,10 +1,8 @@
 /**
  * Abstraction de stockage clé/valeur.
- *
- - Web (application Android) : localStorage de la WebView Capacitor,
-   persisté entre les démarrages.
- - Tests : MapStorage injectable.
- - Étape 3 : pont vers Room (SQLite) côté Android.
+ * - Application Android : localStorage de la WebView Capacitor,
+ *   persistant entre les démarrages tant que les données de l'app restent.
+ * - Tests : stockage Map injectable.
  */
 
 export interface KeyValueStorage {
@@ -27,8 +25,7 @@ export class WebStorage implements KeyValueStorage {
     try {
       window.localStorage.setItem(key, value);
     } catch {
-      // Stockage plein/indisponible : signalé, jamais silencieusement
-      // « réussi ». L'appelant vérifie via read-back si nécessaire.
+      // Stockage plein/indisponible : le prochain read ne confirme pas l'écriture.
     }
   }
 
@@ -36,24 +33,24 @@ export class WebStorage implements KeyValueStorage {
     try {
       window.localStorage.removeItem(key);
     } catch {
-      // sans effet
+      // Stockage indisponible.
     }
   }
 }
 
-/** Stockage de test (ou temporaire) en mémoire. */
+/** Stockage isolé en mémoire pour tests / environnements sans fenêtre. */
 export class MemoryStorage implements KeyValueStorage {
-  private readonly map = new Map<string, string>();
+  private readonly values = new Map<string, string>();
 
   get(key: string): string | null {
-    return this.map.get(key) ?? null;
+    return this.values.get(key) ?? null;
   }
 
   set(key: string, value: string): void {
-    this.map.set(key, value);
+    this.values.set(key, value);
   }
 
   remove(key: string): void {
-    this.map.delete(key);
+    this.values.delete(key);
   }
 }
